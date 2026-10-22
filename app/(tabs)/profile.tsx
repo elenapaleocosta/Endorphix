@@ -11,6 +11,7 @@ import { MotiView } from "moti";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
+import { useSwipeTabs } from "@/hooks/useSwipeTabs";
 import { useHaptics } from "@/hooks/useHaptics";
 import { Colors, Spacing } from "@/constants";
 
@@ -196,12 +197,18 @@ export default function ProfileScreen() {
     updated_at: new Date().toISOString(),
   };
 
+  const swipePanResponder = useSwipeTabs({
+    currentTab: "/(tabs)/profile",
+    rightRoute: "/(tabs)/energy", // Slide right -> Energy
+  });
+
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.obsidian }}
-      contentContainerStyle={{ paddingBottom: 100 }}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={{ flex: 1, backgroundColor: Colors.obsidian }} {...swipePanResponder.panHandlers}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+      >
       {/* Header */}
       <MotiView
         from={{ opacity: 0, translateY: -10 }}
@@ -363,5 +370,6 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </MotiView>
     </ScrollView>
+    </View>
   );
 }

@@ -20,6 +20,7 @@ import { useEnergyWave, useLogEnergy } from "@/hooks/useEnergy";
 import { useBookingStore } from "@/store/booking.store";
 import { useHaptics } from "@/hooks/useHaptics";
 import { EnergyWaveChart } from "@/components/EnergyWaveChart";
+import { useSwipeTabs } from "@/hooks/useSwipeTabs";
 import { Colors, Spacing } from "@/constants";
 import type { Booking } from "@/types";
 
@@ -99,12 +100,19 @@ export default function EnergyScreen() {
   const confirmedBookings = bookings.filter((b) => b.status === "confirmed");
   const loggedBookings = bookings.filter((b) => b.status === "energy_logged");
 
+  const swipePanResponder = useSwipeTabs({
+    currentTab: "/(tabs)/energy",
+    leftRoute: "/(tabs)/profile",    // Slide left -> Profile
+    rightRoute: "/(tabs)/discover", // Slide right -> Discover
+  });
+
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.obsidian }}
-      contentContainerStyle={{ paddingBottom: 110 }}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={{ flex: 1, backgroundColor: Colors.obsidian }} {...swipePanResponder.panHandlers}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 110 }}
+        showsVerticalScrollIndicator={false}
+      >
       {/* Header */}
       <MotiView
         from={{ opacity: 0, translateY: -10 }}
@@ -599,5 +607,6 @@ export default function EnergyScreen() {
         <EnergyWaveChart data={waveData ?? []} />
       </View>
     </ScrollView>
+    </View>
   );
 }
