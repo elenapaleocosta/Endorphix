@@ -15,6 +15,7 @@ import * as ImagePicker from "expo-image-picker";
 import { MotiView } from "moti";
 import { useAuthStore } from "@/store/auth.store";
 import { useHaptics } from "@/hooks/useHaptics";
+import { showAlert } from "@/lib/alert";
 import { Colors, Spacing } from "@/constants";
 
 const AVATAR_PRESETS = [
@@ -53,7 +54,7 @@ export default function EditProfileScreen() {
       if (status !== ImagePicker.PermissionStatus.GRANTED) {
         setIsLoadingImage(false);
         errorHaptic();
-        Alert.alert(
+        showAlert(
           "Photo Access Required",
           canAskAgain
             ? "Endorphix needs access to your photo library to update your Vitality avatar. Please grant photo permission."
@@ -82,7 +83,7 @@ export default function EditProfileScreen() {
     } catch (err: any) {
       setIsLoadingImage(false);
       errorHaptic();
-      Alert.alert(
+      showAlert(
         "Could Not Load Image",
         "An unexpected error occurred while accessing the photo album. Please try again."
       );
@@ -122,7 +123,7 @@ export default function EditProfileScreen() {
       bio: bio.trim(),
       avatar_url: avatarUrl,
     });
-    Alert.alert("Profile Updated", "Your changes have been saved to your Vitality Passport.", [
+    showAlert("Profile Updated", "Your changes have been saved to your Vitality Passport.", [
       {
         text: "OK",
         onPress: () => router.back(),

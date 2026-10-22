@@ -14,6 +14,7 @@ import { MotiView } from "moti";
 import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
 import { useHaptics } from "@/hooks/useHaptics";
+import { showAlert } from "@/lib/alert";
 import { supabase } from "@/lib/supabase";
 import { Colors, Spacing } from "@/constants";
 
@@ -42,7 +43,7 @@ export default function PrivacyDataScreen() {
         session_history: bookings,
         export_date: new Date().toISOString(),
       };
-      Alert.alert(
+      showAlert(
         "Data Export Prepared",
         `Your Vitality archive containing ${bookings.length} activity reservations and profile telemetry has been packaged securely. A download summary has been logged to your console.`,
         [{ text: "Done" }]
@@ -53,7 +54,7 @@ export default function PrivacyDataScreen() {
 
   const handleDeleteAccount = () => {
     heavy();
-    Alert.alert(
+    showAlert(
       "Delete Account?",
       "This action is permanent and cannot be undone. All your Vitality Passport logs, reservations, and lifetime momentum records will be erased forever.",
       [

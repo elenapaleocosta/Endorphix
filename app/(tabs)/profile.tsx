@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,13 +6,17 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  ActivityIndicator,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { MotiView } from "moti";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
 import { useHaptics } from "@/hooks/useHaptics";
+import { showAlert } from "@/lib/alert";
 import { Colors, Spacing } from "@/constants";
 
 interface StatTileProps {
@@ -167,12 +171,58 @@ function ActivityHistorySection() {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { tap, confirm } = useHaptics();
-  const { user, signOut } = useAuthStore();
+  const { tap, confirm, success, error: errorHaptic } = useHaptics();
+  const { user, signOut, updateUserProfile } = useAuthStore();
+  const [isPickingImage, setIsPickingImage] = useState(false);
+
+  const handlePickAvatarDirectly = async () => {
+    tap();
+    try {
+      setIsPickingImage(true);
+      const { status, canAskAgain } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== ImagePicker.PermissionStatus.GRANTED) {
+        setIsPickingImage(false);
+        errorHaptic();
+        showAlert(
+          "Photo Access Required",
+          canAskAgain
+            ? "Endorphix needs access to your photo library to update your avatar. Please grant photo permission."
+            : "Photo library access is currently disabled. Please enable it in your device settings.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+        selectionLimit: 1,
+      });
+
+      setIsPickingImage(false);
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedUri = result.assets[0].uri;
+        success();
+        updateUserProfile({ avatar_url: selectedUri });
+      }
+    } catch (err) {
+      setIsPickingImage(false);
+      errorHaptic();
+      showAlert(
+        "Could Not Load Image",
+        "An unexpected error occurred while accessing your photo album."
+      );
+    }
+  };
 
   const handleSignOut = () => {
     confirm();
-    Alert.alert("Sign out", "Are you sure you want to sign out?", [
+    showAlert("Sign out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Sign out",
@@ -230,13 +280,11 @@ export default function ProfileScreen() {
           VITALITY PASSPORT
         </Text>
 
-        {/* Avatar Container with Edit/Camera Icon Overlay */}
+        {/* Avatar Container: Tapping immediately opens device media library */}
         <TouchableOpacity
-          onPress={() => {
-            tap();
-            router.push("/profile/edit");
-          }}
+          onPress={handlePickAvatarDirectly}
           activeOpacity={0.85}
+          disabled={isPickingImage}
           style={{ position: "relative", width: 76, marginBottom: 14 }}
         >
           <View
@@ -252,7 +300,9 @@ export default function ProfileScreen() {
               justifyContent: "center",
             }}
           >
-            {currentUser.avatar_url ? (
+            {isPickingImage ? (
+              <ActivityIndicator color={Colors.glow} size="small" />
+            ) : currentUser.avatar_url ? (
               <Image
                 source={{ uri: currentUser.avatar_url }}
                 style={{ width: "100%", height: "100%" }}
