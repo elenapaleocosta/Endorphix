@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MotiView } from "moti";
@@ -171,13 +172,17 @@ export default function ProfileScreen() {
 
   const handleSignOut = () => {
     confirm();
-    Alert.alert("Sign out", "End your session?", [
+    Alert.alert("Sign out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Sign out",
         style: "destructive",
         onPress: async () => {
-          await supabase.auth.signOut();
+          try {
+            await supabase.auth.signOut();
+          } catch (e) {
+            // Ignore guest signout network error
+          }
           signOut();
           router.replace("/(auth)/sign-in");
         },
@@ -189,6 +194,9 @@ export default function ProfileScreen() {
     id: "guest-athlete",
     email: "athlete@endorphix.luxury",
     username: "EndorphixAthlete",
+    display_name: "Alex Vance",
+    bio: "Endurance cyclist & vitality seeker.",
+    avatar_url: "",
     streak_current: 7,
     streak_longest: 21,
     lifetime_sessions: 42,
@@ -222,33 +230,57 @@ export default function ProfileScreen() {
           VITALITY PASSPORT
         </Text>
 
-        {/* Avatar Placeholder */}
+        {/* Avatar Placeholder / Photo */}
         <View
           style={{
-            width: 72,
-            height: 72,
-            borderRadius: 36,
+            width: 76,
+            height: 76,
+            borderRadius: 38,
             backgroundColor: Colors.elevated,
             borderWidth: 2,
             borderColor: Colors.glow,
+            overflow: "hidden",
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 14,
           }}
         >
-          <Text style={{ color: Colors.glow, fontSize: 28, fontWeight: "800" }}>
-            {currentUser.username?.[0]?.toUpperCase() ?? "E"}
-          </Text>
+          {currentUser.avatar_url ? (
+            <Image
+              source={{ uri: currentUser.avatar_url }}
+              style={{ width: "100%", height: "100%" }}
+            />
+          ) : (
+            <Text style={{ color: Colors.glow, fontSize: 30, fontWeight: "800" }}>
+              {(currentUser.display_name || currentUser.username || "E")[0].toUpperCase()}
+            </Text>
+          )}
         </View>
 
         <Text
           style={{ color: Colors.primary, fontSize: 26, fontWeight: "800" }}
         >
-          {currentUser.username}
+          {currentUser.display_name || currentUser.username}
         </Text>
-        <Text style={{ color: Colors.secondary, fontSize: 14, marginTop: 2 }}>
+        <Text style={{ color: Colors.glow, fontSize: 13, fontWeight: "600", marginTop: 2 }}>
+          @{currentUser.username}
+        </Text>
+        <Text style={{ color: Colors.secondary, fontSize: 13, marginTop: 4 }}>
           {currentUser.email}
         </Text>
+        {currentUser.bio ? (
+          <Text
+            style={{
+              color: Colors.secondary,
+              fontSize: 13,
+              lineHeight: 18,
+              marginTop: 10,
+              fontStyle: "italic",
+            }}
+          >
+            "{currentUser.bio}"
+          </Text>
+        ) : null}
       </MotiView>
 
       {/* Lifetime Stats */}
@@ -311,9 +343,27 @@ export default function ProfileScreen() {
         </Text>
 
         {[
-          { label: "Edit Profile", onPress: () => tap() },
-          { label: "Notification Preferences", onPress: () => tap() },
-          { label: "Privacy & Data", onPress: () => tap() },
+          {
+            label: "Edit Profile",
+            onPress: () => {
+              tap();
+              router.push("/profile/edit");
+            },
+          },
+          {
+            label: "Notification Preferences",
+            onPress: () => {
+              tap();
+              router.push("/profile/notifications");
+            },
+          },
+          {
+            label: "Privacy & Data",
+            onPress: () => {
+              tap();
+              router.push("/profile/privacy");
+            },
+          },
         ].map((item) => (
           <TouchableOpacity
             key={item.label}

@@ -59,6 +59,18 @@ export default function RootLayout() {
             name="facility/[id]"
             options={{ gestureEnabled: false, animation: "none" }}
           />
+          <Stack.Screen
+            name="profile/edit"
+            options={{ gestureEnabled: false, animation: "none" }}
+          />
+          <Stack.Screen
+            name="profile/notifications"
+            options={{ gestureEnabled: false, animation: "none" }}
+          />
+          <Stack.Screen
+            name="profile/privacy"
+            options={{ gestureEnabled: false, animation: "none" }}
+          />
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>

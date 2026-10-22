@@ -11,6 +11,8 @@ export interface User {
   id: string;
   email: string;
   username: string;
+  display_name?: string;
+  bio?: string;
   avatar_url?: string;
   location?: GeoPoint;
   streak_current: number;
