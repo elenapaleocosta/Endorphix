@@ -7,8 +7,8 @@ type TabRoute = "/(tabs)/discover" | "/(tabs)/energy" | "/(tabs)/profile";
 
 interface SwipeTabsConfig {
   currentTab: TabRoute;
-  leftRoute?: TabRoute;  // Navigated to when user slides LEFT (finger/drag moves right-to-left, dx < -50)
-  rightRoute?: TabRoute; // Navigated to when user slides RIGHT (finger/drag moves left-to-right, dx > 50)
+  leftRoute?: TabRoute;  // Navigated to when user slides LEFT (finger drag moves right-to-left: Discover -> Energy -> Profile)
+  rightRoute?: TabRoute; // Navigated to when user slides RIGHT (finger drag moves left-to-right: Profile -> Energy -> Discover)
 }
 
 export function useSwipeTabs({ currentTab, leftRoute, rightRoute }: SwipeTabsConfig) {
@@ -20,7 +20,7 @@ export function useSwipeTabs({ currentTab, leftRoute, rightRoute }: SwipeTabsCon
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
-        // Only trigger on intentional horizontal gestures
+        // Only trigger on clear horizontal swipes so vertical scrolling isn't blocked
         const { dx, dy } = gestureState;
         return Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 15;
       },
@@ -28,20 +28,22 @@ export function useSwipeTabs({ currentTab, leftRoute, rightRoute }: SwipeTabsCon
         if (isNavigating.current) return;
         const { dx, vx } = gestureState;
 
-        // Slide left: user swipes finger to the left (dx < -45 or velocity < -0.3)
-        if ((dx < -45 || vx < -0.3) && leftRoute) {
+        // Slide left: finger drag moves to the left (dx < -30 or flick vx < -0.2)
+        // Transition: Discover -> Energy -> Profile
+        if ((dx < -30 || vx < -0.2) && leftRoute) {
           isNavigating.current = true;
           tap();
-          router.replace(leftRoute);
+          router.navigate(leftRoute);
           setTimeout(() => {
             isNavigating.current = false;
           }, 350);
         }
-        // Slide right: user swipes finger to the right (dx > 45 or velocity > 0.3)
-        else if ((dx > 45 || vx > 0.3) && rightRoute) {
+        // Slide right: finger drag moves to the right (dx > 30 or flick vx > 0.2)
+        // Transition: Profile -> Energy -> Discover
+        else if ((dx > 30 || vx > 0.2) && rightRoute) {
           isNavigating.current = true;
           tap();
-          router.replace(rightRoute);
+          router.navigate(rightRoute);
           setTimeout(() => {
             isNavigating.current = false;
           }, 350);
