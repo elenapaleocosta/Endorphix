@@ -74,12 +74,6 @@ export default function TabsLayout() {
         listeners={{ tabPress: () => tap() }}
       />
       <Tabs.Screen
-        name="spark"
-        options={{
-          href: null, // Merged into Discover tab
-        }}
-      />
-      <Tabs.Screen
         name="energy"
         options={{
           tabBarIcon: ({ focused }) => (
