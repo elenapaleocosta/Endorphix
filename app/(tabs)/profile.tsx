@@ -230,32 +230,64 @@ export default function ProfileScreen() {
           VITALITY PASSPORT
         </Text>
 
-        {/* Avatar Placeholder / Photo */}
-        <View
-          style={{
-            width: 76,
-            height: 76,
-            borderRadius: 38,
-            backgroundColor: Colors.elevated,
-            borderWidth: 2,
-            borderColor: Colors.glow,
-            overflow: "hidden",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: 14,
+        {/* Avatar Container with Edit/Camera Icon Overlay */}
+        <TouchableOpacity
+          onPress={() => {
+            tap();
+            router.push("/profile/edit");
           }}
+          activeOpacity={0.85}
+          style={{ position: "relative", width: 76, marginBottom: 14 }}
         >
-          {currentUser.avatar_url ? (
-            <Image
-              source={{ uri: currentUser.avatar_url }}
-              style={{ width: "100%", height: "100%" }}
-            />
-          ) : (
-            <Text style={{ color: Colors.glow, fontSize: 30, fontWeight: "800" }}>
-              {(currentUser.display_name || currentUser.username || "E")[0].toUpperCase()}
-            </Text>
-          )}
-        </View>
+          <View
+            style={{
+              width: 76,
+              height: 76,
+              borderRadius: 38,
+              backgroundColor: Colors.elevated,
+              borderWidth: 2,
+              borderColor: Colors.glow,
+              overflow: "hidden",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {currentUser.avatar_url ? (
+              <Image
+                source={{ uri: currentUser.avatar_url }}
+                style={{ width: "100%", height: "100%" }}
+              />
+            ) : (
+              <Text style={{ color: Colors.glow, fontSize: 30, fontWeight: "800" }}>
+                {(currentUser.display_name || currentUser.username || "E")[0].toUpperCase()}
+              </Text>
+            )}
+          </View>
+
+          {/* Camera / Edit Badge Overlay */}
+          <View
+            style={{
+              position: "absolute",
+              bottom: 0,
+              right: 0,
+              backgroundColor: Colors.glow,
+              width: 26,
+              height: 26,
+              borderRadius: 13,
+              borderWidth: 2,
+              borderColor: Colors.void,
+              alignItems: "center",
+              justifyContent: "center",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.3,
+              shadowRadius: 2,
+              elevation: 3,
+            }}
+          >
+            <Text style={{ fontSize: 11 }}>📷</Text>
+          </View>
+        </TouchableOpacity>
 
         <Text
           style={{ color: Colors.primary, fontSize: 26, fontWeight: "800" }}

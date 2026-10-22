@@ -8,8 +8,10 @@ import {
   Image,
   Alert,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { MotiView } from "moti";
 import { useAuthStore } from "@/store/auth.store";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -24,7 +26,7 @@ const AVATAR_PRESETS = [
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { tap, success, error: errorHaptic } = useHaptics();
+  const { tap, success, error: errorHaptic, selection } = useHaptics();
   const { user, updateUserProfile } = useAuthStore();
 
   const [displayName, setDisplayName] = useState(
@@ -36,7 +38,61 @@ export default function EditProfileScreen() {
       "Endurance cyclist & somatic vitality seeker. Building high-cadence momentum daily."
   );
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || "");
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [errors, setErrors] = useState<{ displayName?: string; username?: string }>({});
+
+  const pickImageFromLibrary = async () => {
+    tap();
+    try {
+      setIsLoadingImage(true);
+
+      // Check / request permissions
+      const { status, canAskAgain } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== ImagePicker.PermissionStatus.GRANTED) {
+        setIsLoadingImage(false);
+        errorHaptic();
+        Alert.alert(
+          "Photo Access Required",
+          canAskAgain
+            ? "Endorphix needs access to your photo library to update your Vitality avatar. Please grant photo permission."
+            : "Photo library access is currently disabled. Please enable photo permissions in your device settings.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
+
+      // Launch Native Picker with image restrictions & 1:1 square crop
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+        selectionLimit: 1,
+      });
+
+      setIsLoadingImage(false);
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedUri = result.assets[0].uri;
+        success();
+        setAvatarUrl(selectedUri);
+      }
+    } catch (err: any) {
+      setIsLoadingImage(false);
+      errorHaptic();
+      Alert.alert(
+        "Could Not Load Image",
+        "An unexpected error occurred while accessing the photo album. Please try again."
+      );
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    selection();
+    setAvatarUrl("");
+  };
 
   const validate = () => {
     const errs: { displayName?: string; username?: string } = {};
@@ -108,52 +164,125 @@ export default function EditProfileScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingTop: 28, paddingBottom: 60 }}
+        contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingTop: 24, paddingBottom: 60 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Avatar Section */}
+        {/* Avatar Section with Camera Icon Overlay */}
         <MotiView
           from={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "timing", duration: 400 }}
-          style={{ alignItems: "center", marginBottom: 32 }}
+          style={{ alignItems: "center", marginBottom: 28 }}
         >
-          <View
+          {/* Avatar Container with Tap Handler */}
+          <TouchableOpacity
+            onPress={pickImageFromLibrary}
+            activeOpacity={0.85}
+            style={{ position: "relative", marginBottom: 12 }}
+          >
+            <View
+              style={{
+                width: 96,
+                height: 96,
+                borderRadius: 48,
+                backgroundColor: Colors.elevated,
+                borderWidth: 2.5,
+                borderColor: Colors.glow,
+                overflow: "hidden",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {isLoadingImage ? (
+                <ActivityIndicator color={Colors.glow} size="small" />
+              ) : avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={{ width: "100%", height: "100%" }} />
+              ) : (
+                <Text style={{ color: Colors.glow, fontSize: 36, fontWeight: "800" }}>
+                  {(displayName || username || "E")[0].toUpperCase()}
+                </Text>
+              )}
+            </View>
+
+            {/* Camera / Edit Badge Overlay */}
+            <View
+              style={{
+                position: "absolute",
+                bottom: 0,
+                right: 0,
+                backgroundColor: Colors.glow,
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                borderWidth: 2.5,
+                borderColor: Colors.void,
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.35,
+                shadowRadius: 3,
+                elevation: 4,
+              }}
+            >
+              <Text style={{ fontSize: 14 }}>📷</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Primary Action: Choose from Library */}
+          <TouchableOpacity
+            onPress={pickImageFromLibrary}
+            activeOpacity={0.7}
             style={{
-              width: 90,
-              height: 90,
-              borderRadius: 45,
-              backgroundColor: Colors.elevated,
-              borderWidth: 2,
-              borderColor: Colors.glow,
-              overflow: "hidden",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: 12,
+              paddingVertical: 6,
+              paddingHorizontal: 12,
+              marginBottom: 6,
             }}
           >
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={{ width: "100%", height: "100%" }} />
-            ) : (
-              <Text style={{ color: Colors.glow, fontSize: 34, fontWeight: "800" }}>
-                {(displayName || username || "E")[0].toUpperCase()}
-              </Text>
-            )}
-          </View>
+            <Text
+              style={{
+                color: Colors.glow,
+                fontSize: 13,
+                fontWeight: "700",
+                letterSpacing: 0.5,
+              }}
+            >
+              {isLoadingImage ? "Opening Gallery..." : "Choose from Library"}
+            </Text>
+          </TouchableOpacity>
 
+          {/* Revert / Remove custom avatar if one is set */}
+          {avatarUrl ? (
+            <TouchableOpacity
+              onPress={handleRemoveAvatar}
+              activeOpacity={0.7}
+              style={{
+                paddingVertical: 4,
+                paddingHorizontal: 8,
+                marginBottom: 16,
+              }}
+            >
+              <Text style={{ color: Colors.danger, fontSize: 11, fontWeight: "600" }}>
+                Remove Photo · Use Default Avatar
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ marginBottom: 12 }} />
+          )}
+
+          {/* Preset Avatar Selection Row */}
           <Text
             style={{
               color: Colors.tertiary,
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: "700",
               letterSpacing: 1.5,
               marginBottom: 10,
             }}
           >
-            SELECT AVATAR PRESET
+            OR CHOOSE AN ATHLETE PRESET
           </Text>
 
-          {/* Preset Avatar Selection Row */}
           <View style={{ flexDirection: "row", gap: 12 }}>
             <TouchableOpacity
               onPress={() => {
@@ -171,7 +300,7 @@ export default function EditProfileScreen() {
                 justifyContent: "center",
               }}
             >
-              <Text style={{ color: Colors.tertiary, fontSize: 12, fontWeight: "700" }}>Init</Text>
+              <Text style={{ color: Colors.tertiary, fontSize: 11, fontWeight: "700" }}>Default</Text>
             </TouchableOpacity>
 
             {AVATAR_PRESETS.map((preset, idx) => (
