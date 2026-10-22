@@ -1,10 +1,8 @@
 import { Tabs } from "expo-router";
-import { View, Text, Platform, Dimensions } from "react-native";
+import { View, Text, Platform } from "react-native";
 import { Colors } from "@/constants";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useLocation } from "@/hooks/useLocation";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // ─── Tab Icon ──────────────────────────────────────────────────────────────────
 
@@ -53,25 +51,6 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        animation: "shift",
-        sceneStyleInterpolator: ({ current }) => ({
-          sceneStyle: {
-            transform: [
-              {
-                translateX: current.progress.interpolate({
-                  inputRange: [-1, 0, 1],
-                  outputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
-                }),
-              },
-            ],
-          },
-        }),
-        transitionSpec: {
-          animation: "timing",
-          config: {
-            duration: 280,
-          },
-        },
         tabBarStyle: {
           backgroundColor: Colors.void,
           borderTopColor: Colors.border,

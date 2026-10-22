@@ -20,7 +20,6 @@ import { useEnergyWave, useLogEnergy } from "@/hooks/useEnergy";
 import { useBookingStore } from "@/store/booking.store";
 import { useHaptics } from "@/hooks/useHaptics";
 import { EnergyWaveChart } from "@/components/EnergyWaveChart";
-import { useSwipeTabs } from "@/hooks/useSwipeTabs";
 import { Colors, Spacing } from "@/constants";
 import type { Booking } from "@/types";
 
@@ -100,14 +99,8 @@ export default function EnergyScreen() {
   const confirmedBookings = bookings.filter((b) => b.status === "confirmed");
   const loggedBookings = bookings.filter((b) => b.status === "energy_logged");
 
-  const swipePanResponder = useSwipeTabs({
-    currentTab: "/(tabs)/energy",
-    leftRoute: "/(tabs)/profile",    // Slide left -> Profile
-    rightRoute: "/(tabs)/discover", // Slide right -> Discover
-  });
-
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.obsidian }} {...swipePanResponder.panHandlers}>
+    <View style={{ flex: 1, backgroundColor: Colors.obsidian }}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 110 }}

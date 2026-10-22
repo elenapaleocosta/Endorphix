@@ -22,7 +22,6 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { FacilityCard } from "@/components/FacilityCard";
 import { SportPill } from "@/components/SportPill";
 import { SearchModeToggle } from "@/components/SearchModeToggle";
-import { useSwipeTabs } from "@/hooks/useSwipeTabs";
 import { Colors, Spacing } from "@/constants";
 import type { Facility, SportCategory } from "@/types";
 
@@ -93,13 +92,8 @@ export default function DiscoverScreen() {
       ? sparkFacilities[sparkIndex % sparkFacilities.length]
       : undefined;
 
-  const swipePanResponder = useSwipeTabs({
-    currentTab: "/(tabs)/discover",
-    leftRoute: "/(tabs)/energy", // Slide left -> Energy
-  });
-
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.obsidian }} {...swipePanResponder.panHandlers}>
+    <View style={{ flex: 1, backgroundColor: Colors.obsidian }}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: 110 }}
         showsVerticalScrollIndicator={false}
