@@ -60,7 +60,7 @@ export default function SignInScreen() {
         const { useAuthStore } = await import("@/store/auth.store");
         useAuthStore.getState().setUser(mockUser);
         success();
-        router.replace("/(tabs)/discover");
+        router.replace("/(tabs)");
         return;
       }
 
@@ -84,7 +84,7 @@ export default function SignInScreen() {
       }
 
       success();
-      router.replace("/(tabs)/discover");
+      router.replace("/(tabs)");
     } catch (err: any) {
       errorHaptic();
       showAlert("Sign in error", err.message || "An unexpected error occurred");

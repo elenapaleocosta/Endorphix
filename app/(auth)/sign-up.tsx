@@ -60,7 +60,7 @@ export default function SignUpScreen() {
         useAuthStore.getState().setUser(mockUser);
         success();
         showAlert("Passport Activated", "Welcome to endorphix! Jumping straight into discovery.");
-        router.replace("/(tabs)/discover");
+        router.replace("/(tabs)");
         return;
       }
 

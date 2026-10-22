@@ -44,7 +44,7 @@ export default function FacilityDetailScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace("/(tabs)/discover");
+      router.replace("/(tabs)");
     }
   };
 
