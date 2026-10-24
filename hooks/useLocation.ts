@@ -18,6 +18,21 @@ export function useLocation() {
 
       // On Web, expo-location watchPosition / removeSubscription has known shim quirks
       if (Platform.OS === "web") {
+        if (typeof navigator !== "undefined" && "permissions" in navigator && (navigator as any).permissions?.query) {
+          try {
+            const perm = await (navigator as any).permissions.query({ name: "geolocation" });
+            if (perm && perm.state === "denied") {
+              if (!isMounted) return;
+              setUserLocation({ latitude: 37.9838, longitude: 23.7275 });
+              setLocationPermission("denied");
+              setLoadingLocation(false);
+              return;
+            }
+          } catch {
+            // Permissions query fallback
+          }
+        }
+
         if ("geolocation" in navigator) {
           navigator.geolocation.getCurrentPosition(
             (pos) => {

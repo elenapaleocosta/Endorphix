@@ -1,3 +1,92 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════
+   endorphix System Cursor Architecture
+   - Eliminates all decorative or animated cursor trails / followers
+   - Sets a consistent, lightweight cursor style across the entire app
+   - cursor: default for general surfaces and non-interactive text
+   - cursor: pointer for all buttons, tabs, links, and clickable cards
+   - cursor: text for inputs and editable areas
+   - Custom lightweight SVG precision image cursors for focal areas
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── 1. General Surfaces & Backgrounds (Default) ─── */
+html,
+body,
+#root,
+div,
+section,
+header,
+main,
+footer,
+[data-cursor="default"] {
+  cursor: default;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Informational Typography: Prevents accidental I-beam on static labels */
+h1, h2, h3, h4, h5, h6,
+p, span, label {
+  cursor: default;
+}
+
+/* ─── 2. Text Inputs & Editable Fields (Text I-Beam) ─── */
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  cursor: text !important;
+}
+
+/* ─── 3. Clickable Interactive Elements (Pointer) ─── */
+button,
+a,
+[role="button"],
+[role="tab"],
+[role="link"],
+[role="switch"],
+[role="checkbox"],
+[role="radio"],
+[tabindex="0"],
+.cursor-pointer,
+[data-cursor="pointer"] {
+  cursor: pointer !important;
+}
+
+/* Prevent text/icon children within interactive elements from flickering to text cursor */
+button *,
+a *,
+[role="button"] *,
+[role="tab"] *,
+[role="link"] *,
+[role="switch"] *,
+[role="checkbox"] * {
+  cursor: pointer !important;
+}
+
+/* ─── 4. Disabled Elements (Not-Allowed) ─── */
+button:disabled,
+[disabled],
+[aria-disabled="true"],
+.disabled,
+.disabled * {
+  cursor: not-allowed !important;
+}
+
+/* ─── 5. Custom Lightweight SVG Image Cursors (Specific Focal Areas) ─── */
+
+/* Somatic Cadence Reticle Cursor (for D3/SVG Energy Wave Somatic Chart Area) */
+.cursor-energy-wave,
+[data-cursor="energy-wave"],
+[data-cursor="energy-wave"] * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='4.5' stroke='%235A6738' stroke-width='1.5' fill='%235A6738' fill-opacity='0.18'/%3E%3Cline x1='12' y1='2' x2='12' y2='6' stroke='%235A6738' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='12' y1='18' x2='12' y2='22' stroke='%235A6738' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='2' y1='12' x2='6' y2='12' stroke='%235A6738' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='18' y1='12' x2='22' y2='12' stroke='%235A6738' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, crosshair !important;
+}
+
+/* Spontaneous Spark Catalyst Cursor (for Spark Action Trigger Button) */
+.cursor-spark,
+[data-cursor="spark"],
+[data-cursor="spark"] * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M13 2L4 14h7l-2 8 11-12h-7l2-8z' fill='%236F2E1B' stroke='%23EDEBE6' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E") 4 4, pointer !important;
+}

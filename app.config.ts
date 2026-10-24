@@ -8,27 +8,27 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "endorphix",
-  userInterfaceStyle: "dark",
-  backgroundColor: "#0A0A0F",
+  userInterfaceStyle: "light",
+  backgroundColor: "#EDEBE6",
   splash: {
     image: "./assets/images/splash-icon.png",
     resizeMode: "contain",
-    backgroundColor: "#0A0A0F",
+    backgroundColor: "#EDEBE6",
   },
   ios: {
     supportsTablet: false,
     bundleIdentifier: "com.endorphix.app",
     infoPlist: {
       NSLocationWhenInUseUsageDescription:
-        "Endorphix uses your location to discover elite facilities within 50km.",
+        "endorphix uses your location to discover elite athletic facilities within a 50km radius.",
       NSLocationAlwaysAndWhenInUseUsageDescription:
-        "Endorphix uses your location to log activity and track momentum.",
+        "endorphix uses your location to log somatic activity and track consecutive momentum.",
     },
   },
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#0A0A0F",
+      backgroundColor: "#EDEBE6",
     },
     package: "com.endorphix.app",
     permissions: [
@@ -52,7 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         image: "./assets/images/splash-icon.png",
         imageWidth: 200,
         resizeMode: "contain",
-        backgroundColor: "#0A0A0F",
+        backgroundColor: "#EDEBE6",
       },
     ],
   ],
@@ -60,11 +60,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     typedRoutes: true,
   },
   extra: {
-    supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-    supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-    googlePlacesApiKey: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY,
     eas: {
-      projectId: "YOUR_EAS_PROJECT_ID",
+      projectId: "your-eas-project-id",
     },
   },
 });

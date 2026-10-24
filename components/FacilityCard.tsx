@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { Image, Text, TouchableOpacity, View } from "react-native";
 import { Colors } from "@/constants";
 import type { Facility } from "@/types";
 
@@ -8,137 +8,148 @@ interface FacilityCardProps {
   onPress: () => void;
 }
 
+const REALM_THEMES: Record<string, { label: string; color: string; bg: string }> = {
+  water: {
+    label: "WATER",
+    color: Colors.camel,
+    bg: Colors.camel + "22",
+  },
+  land: {
+    label: "LAND",
+    color: Colors.olive,
+    bg: Colors.olive + "22",
+  },
+  mountain: {
+    label: "MOUNTAIN",
+    color: Colors.terracotta,
+    bg: Colors.terracotta + "22",
+  },
+};
+
 export function FacilityCard({ facility, onPress }: FacilityCardProps) {
-  const isTopRated = facility.rating >= 4.5;
+  const realm = facility.macro_realm || "land";
+  const realmTheme = REALM_THEMES[realm] || REALM_THEMES.land;
+  const imageUrl =
+    facility.images?.[0] ||
+    "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=1200&q=80";
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      activeOpacity={0.85}
+      activeOpacity={0.88}
       style={{
-        backgroundColor: Colors.surface,
+        backgroundColor: Colors.sand,
         borderRadius: 16,
-        padding: 16,
+        padding: 14,
         borderWidth: 1,
-        borderColor: isTopRated ? Colors.glow + "40" : Colors.border,
+        borderColor: Colors.sandDark,
+        marginBottom: 14,
+        cursor: "pointer" as any,
+        overflow: "hidden",
       }}
     >
-      <View
+      {/* Facility Picture */}
+      <Image
+        source={{ uri: imageUrl }}
         style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: 10,
+          width: "100%",
+          height: 140,
+          borderRadius: 10,
+          backgroundColor: Colors.sandDark,
+          marginBottom: 12,
         }}
-      >
-        <View style={{ flex: 1 }}>
-          {/* Sport Tags */}
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 6,
-              marginBottom: 6,
-              flexWrap: "wrap",
-            }}
-          >
-            {facility.primary_sports.slice(0, 2).map((sport) => (
-              <View
-                key={sport}
-                style={{
-                  paddingHorizontal: 7,
-                  paddingVertical: 3,
-                  borderRadius: 5,
-                  backgroundColor: Colors.elevated,
-                }}
-              >
-                <Text
-                  style={{
-                    color: Colors.spark,
-                    fontSize: 9,
-                    fontWeight: "700",
-                    letterSpacing: 1.5,
-                  }}
-                >
-                  {sport.toUpperCase()}
-                </Text>
-              </View>
-            ))}
-            {facility.is_live && (
-              <View
-                style={{
-                  paddingHorizontal: 7,
-                  paddingVertical: 3,
-                  borderRadius: 5,
-                  backgroundColor: Colors.live + "22",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-              >
-                <View
-                  style={{
-                    width: 5,
-                    height: 5,
-                    borderRadius: 2.5,
-                    backgroundColor: Colors.live,
-                  }}
-                />
-                <Text
-                  style={{
-                    color: Colors.live,
-                    fontSize: 9,
-                    fontWeight: "700",
-                    letterSpacing: 1.5,
-                  }}
-                >
-                  LIVE
-                </Text>
-              </View>
-            )}
-          </View>
+        resizeMode="cover"
+      />
 
-          <Text
-            style={{
-              color: Colors.primary,
-              fontSize: 16,
-              fontWeight: "700",
-              lineHeight: 22,
-            }}
-            numberOfLines={2}
-          >
-            {facility.name}
-          </Text>
-        </View>
-
-        {/* Rating */}
-        <View
-          style={{
-            backgroundColor: Colors.elevated,
-            borderRadius: 8,
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            alignItems: "center",
-            marginLeft: 12,
-          }}
-        >
-          <Text
-            style={{ color: Colors.glow, fontSize: 16, fontWeight: "800" }}
-          >
-            {facility.rating.toFixed(1)}
-          </Text>
-        </View>
-      </View>
-
-      {/* Address + Distance */}
+      {/* Badges Row: Realm Badge & Rating Badge */}
       <View
         style={{
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
+          marginBottom: 8,
+          width: "100%",
+        }}
+      >
+        {/* Realm Badge */}
+        <View
+          style={{
+            backgroundColor: realmTheme.bg,
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            borderRadius: 6,
+            alignSelf: "flex-start",
+          }}
+        >
+          <Text
+            style={{
+              color: realmTheme.color,
+              fontSize: 10,
+              fontWeight: "800",
+              letterSpacing: 1.2,
+            }}
+          >
+            {realmTheme.label}
+          </Text>
+        </View>
+
+        {/* Rating Badge (Self-contained, bounded to prevent overflow) */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: Colors.olive,
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            borderRadius: 6,
+            flexShrink: 0,
+          }}
+        >
+          <Text
+            style={{
+              color: Colors.chalk,
+              fontSize: 11,
+              fontWeight: "800",
+              letterSpacing: 0.3,
+            }}
+          >
+            ★ {facility.rating ? facility.rating.toFixed(1) : "5.0"}
+          </Text>
+        </View>
+      </View>
+
+      {/* Facility Name */}
+      <Text
+        style={{
+          color: Colors.espresso,
+          fontSize: 16,
+          fontWeight: "800",
+          letterSpacing: -0.2,
+          lineHeight: 22,
+          marginBottom: 4,
+        }}
+        numberOfLines={2}
+      >
+        {facility.name}
+      </Text>
+
+      {/* Facility Address + Distance */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginTop: 2,
         }}
       >
         <Text
-          style={{ color: Colors.secondary, fontSize: 12, flex: 1 }}
+          style={{
+            color: Colors.espressoMuted,
+            fontSize: 12,
+            lineHeight: 16,
+            flex: 1,
+            marginRight: 8,
+          }}
           numberOfLines={1}
         >
           {facility.address}
@@ -146,10 +157,10 @@ export function FacilityCard({ facility, onPress }: FacilityCardProps) {
         {facility.distance_meters !== undefined && (
           <Text
             style={{
-              color: Colors.tertiary,
+              color: Colors.espressoFaint,
               fontSize: 11,
-              marginLeft: 8,
               fontWeight: "600",
+              flexShrink: 0,
             }}
           >
             {(facility.distance_meters / 1000).toFixed(1)} km

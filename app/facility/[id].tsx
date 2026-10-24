@@ -14,37 +14,38 @@ import { MotiView } from "moti";
 import { useFacilityDetail } from "@/hooks/useFacilities";
 import { useBookingStore } from "@/store/booking.store";
 import { useHaptics } from "@/hooks/useHaptics";
-import { LiveBadge } from "@/components/LiveBadge";
 import { TimetableCard } from "@/components/TimetableCard";
+import { showAlert } from "@/lib/alert";
 import { Colors, Spacing } from "@/constants";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 
 const SAMPLE_SLOTS = [
-  { start: "14:00", end: "15:00", label: "Court 1 (Clay)" },
-  { start: "15:00", end: "16:00", label: "Court 2 (Hard)" },
-  { start: "17:00", end: "18:00", label: "Court 1 (Clay)" },
-  { start: "19:00", end: "20:00", label: "Center Court" },
+  { start: "07:30", end: "08:30", label: "Center Court (Clay)" },
+  { start: "14:00", end: "15:00", label: "Court 1 (Grass / Lawn)" },
+  { start: "16:30", end: "17:30", label: "Court 2 (Clay)" },
+  { start: "18:00", end: "19:00", label: "Olympic Lap Lane 4" },
 ];
 
 export default function FacilityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { tap, confirm, success } = useHaptics();
-  const { createBooking } = useBookingStore();
+  const { createBooking, simulate30MinutesPostSession } = useBookingStore();
 
-  const { data: facility, isLoading, error } = useFacilityDetail(id);
+  const { data: facility, isLoading, error } = useFacilityDetail(id || "fac-heritage-1");
 
   const [selectedSportIndex, setSelectedSportIndex] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState(SAMPLE_SLOTS[0]);
   const [bookedSuccess, setBookedSuccess] = useState(false);
+  const [lastBookingId, setLastBookingId] = useState<string | null>(null);
 
   const handleGoBack = () => {
     tap();
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/discover");
     }
   };
 
@@ -55,31 +56,40 @@ export default function FacilityDetailScreen() {
     const chosenSport = facility.primary_sports[selectedSportIndex] || "tennis";
     const titleFormatted = chosenSport.charAt(0).toUpperCase() + chosenSport.slice(1);
 
-    const booking = createBooking({
+    const newBooking = createBooking({
       facility_id: facility.id,
       facility_name: facility.name,
       activity_name: titleFormatted,
-      activity_type: chosenSport as any,
+      activity_type: (chosenSport === "tennis" ? "tennis" : chosenSport === "running" ? "run" : "other") as any,
       court_or_slot: selectedSlot.label,
       date: "Today",
       start_time: selectedSlot.start,
       end_time: selectedSlot.end,
     });
 
+    setLastBookingId(newBooking.id);
     success();
     setBookedSuccess(true);
 
-    if (Platform.OS === "web") {
-      window.alert(
-        `Court Reserved!\n${facility.name}\n${titleFormatted} • ${selectedSlot.start}-${selectedSlot.end} (${selectedSlot.label})\n\nA notification will be sent 30 minutes after completion asking you to slide your energy level.`
-      );
-    }
+    showAlert(
+      "Court Reserved",
+      `${facility.name}\n${titleFormatted} • ${selectedSlot.start}-${selectedSlot.end} (${selectedSlot.label})\n\nAn in-phone notification will trigger 30 minutes after completion asking you to slide your somatic energy level.`
+    );
   };
 
   const handleCall = () => {
     confirm();
     if (facility?.phone) {
       Linking.openURL(`tel:${facility.phone}`);
+    } else {
+      showAlert("Contact", "Phone line unavailable for this facility.");
+    }
+  };
+
+  const handleWebsite = () => {
+    confirm();
+    if (facility?.website) {
+      Linking.openURL(facility.website);
     }
   };
 
@@ -100,12 +110,12 @@ export default function FacilityDetailScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor: Colors.obsidian,
+          backgroundColor: Colors.chalk,
           justifyContent: "center",
           alignItems: "center",
         }}
       >
-        <ActivityIndicator color={Colors.glow} size="large" />
+        <ActivityIndicator color={Colors.olive} size="large" />
       </View>
     );
   }
@@ -115,261 +125,385 @@ export default function FacilityDetailScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor: Colors.obsidian,
+          backgroundColor: Colors.chalk,
           justifyContent: "center",
           alignItems: "center",
-          paddingHorizontal: Spacing.lg,
+          paddingHorizontal: Spacing.xl,
         }}
       >
-        <Text style={{ color: Colors.danger, fontSize: 15, textAlign: "center" }}>
+        <Text style={{ color: Colors.terracotta, fontSize: 16, fontWeight: "700", textAlign: "center" }}>
           Could not load facility details.
         </Text>
         <TouchableOpacity onPress={handleGoBack} style={{ marginTop: 20 }}>
-          <Text style={{ color: Colors.glow }}>← Go back</Text>
+          <Text style={{ color: Colors.olive, fontWeight: "800" }}>← Return to Discover</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  const distanceKm =
+    facility.distance_meters !== undefined
+      ? (facility.distance_meters / 1000).toFixed(1)
+      : "1.4";
+
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.obsidian }}>
+    <View style={{ flex: 1, backgroundColor: Colors.chalk }}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Immersive Header */}
+        {/* Header Hero Area */}
         <View
           style={{
-            height: SCREEN_H * 0.35,
-            backgroundColor: Colors.surface,
-            justifyContent: "flex-end",
-            padding: Spacing.lg,
+            backgroundColor: Colors.sand,
+            paddingTop: Platform.OS === "ios" ? 54 : 40,
+            paddingBottom: 24,
+            paddingHorizontal: Spacing.xl,
+            borderBottomWidth: 1,
+            borderBottomColor: Colors.sandDark,
           }}
         >
-          {/* Back Button */}
-          <TouchableOpacity
-            onPress={handleGoBack}
-            activeOpacity={0.7}
+          {/* Top Bar with Back Button and Live Badge */}
+          <View
             style={{
-              position: "absolute",
-              top: 54,
-              left: Spacing.lg,
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: Colors.void,
-              borderWidth: 1,
-              borderColor: Colors.border,
+              flexDirection: "row",
+              justifyContent: "space-between",
               alignItems: "center",
-              justifyContent: "center",
-              zIndex: 10,
-              elevation: 5,
+              marginBottom: 16,
             }}
           >
-            <Text style={{ color: Colors.primary, fontSize: 20, fontWeight: "700" }}>←</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleGoBack}
+              activeOpacity={0.8}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: Colors.softChalk,
+                borderWidth: 1,
+                borderColor: Colors.sandDark,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={{ color: Colors.espresso, fontSize: 18, fontWeight: "700" }}>←</Text>
+            </TouchableOpacity>
+          </View>
 
-          {/* Live Badge */}
-          {facility.is_live && (
-            <View style={{ position: "absolute", top: 54, right: Spacing.lg }}>
-              <LiveBadge count={facility.live_count} />
+          {/* Tags */}
+          <View style={{ flexDirection: "row", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+            <View
+              style={{
+                paddingHorizontal: 8,
+                paddingVertical: 3.5,
+                borderRadius: 6,
+                backgroundColor: Colors.camel + "22",
+                borderWidth: 1,
+                borderColor: Colors.camel + "44",
+              }}
+            >
+              <Text style={{ color: Colors.camel, fontSize: 10, fontWeight: "800" }}>
+                REALM: {facility.macro_realm?.toUpperCase() || "LAND"}
+              </Text>
             </View>
-          )}
 
-          {/* Sport Tags */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
             {facility.primary_sports.map((sport) => (
               <View
                 key={sport}
                 style={{
-                  marginRight: 6,
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
+                  paddingHorizontal: 8,
+                  paddingVertical: 3.5,
                   borderRadius: 6,
-                  backgroundColor: Colors.glow + "33",
+                  backgroundColor: Colors.softChalk,
+                  borderWidth: 1,
+                  borderColor: Colors.sandDark,
                 }}
               >
-                <Text
-                  style={{
-                    color: Colors.glow,
-                    fontSize: 10,
-                    fontWeight: "700",
-                    letterSpacing: 2,
-                  }}
-                >
+                <Text style={{ color: Colors.espresso, fontSize: 10, fontWeight: "700" }}>
                   {sport.toUpperCase()}
                 </Text>
               </View>
             ))}
-          </ScrollView>
+          </View>
 
+          {/* Title */}
           <Text
-            style={{ color: Colors.primary, fontSize: 26, fontWeight: "800" }}
+            style={{
+              color: Colors.espresso,
+              fontSize: 28,
+              fontWeight: "800",
+              letterSpacing: -0.6,
+              lineHeight: 34,
+              marginBottom: 6,
+            }}
           >
             {facility.name}
           </Text>
-          <Text style={{ color: Colors.secondary, fontSize: 13, marginTop: 4 }}>
-            {facility.address}
+
+          {/* Address & Proximity */}
+          <Text
+            style={{
+              color: Colors.espressoMuted,
+              fontSize: 13,
+              marginBottom: 12,
+            }}
+          >
+            {facility.address} · <Text style={{ color: Colors.olive, fontWeight: "700" }}>{distanceKm} km from you</Text>
+          </Text>
+
+          {/* Quick Contact & Navigation Row */}
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+            <TouchableOpacity
+              onPress={handleDirections}
+              style={{
+                flex: 1,
+                backgroundColor: Colors.olive,
+                borderRadius: 12,
+                paddingVertical: 11,
+                alignItems: "center",
+                flexDirection: "row",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              <Text style={{ color: Colors.chalk, fontSize: 12, fontWeight: "800" }}>
+                Route Map ↗
+              </Text>
+            </TouchableOpacity>
+
+            {facility.phone && (
+              <TouchableOpacity
+                onPress={handleCall}
+                style={{
+                  backgroundColor: Colors.softChalk,
+                  borderRadius: 12,
+                  paddingVertical: 11,
+                  paddingHorizontal: 16,
+                  borderWidth: 1,
+                  borderColor: Colors.sandDark,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: Colors.espresso, fontSize: 12, fontWeight: "700" }}>
+                  Call Venue 📞
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {facility.website && (
+              <TouchableOpacity
+                onPress={handleWebsite}
+                style={{
+                  backgroundColor: Colors.softChalk,
+                  borderRadius: 12,
+                  paddingVertical: 11,
+                  paddingHorizontal: 16,
+                  borderWidth: 1,
+                  borderColor: Colors.sandDark,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: Colors.espresso, fontSize: 12, fontWeight: "700" }}>
+                  Web 🌐
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Overview Section */}
+        <View style={{ paddingHorizontal: Spacing.xl, paddingTop: 20, marginBottom: 22 }}>
+          <Text
+            style={{
+              color: Colors.espressoMuted,
+              fontSize: 11,
+              fontWeight: "800",
+              letterSpacing: 1.5,
+              marginBottom: 8,
+            }}
+          >
+            OVERVIEW & ATHLETIC STANDARD
+          </Text>
+          <Text
+            style={{
+              color: Colors.espresso,
+              fontSize: 14.5,
+              lineHeight: 22,
+              fontWeight: "500",
+            }}
+          >
+            {facility.description ||
+              "Premier championship athletic grounds built for sustained aerobic conditioning and somatic recovery."}
           </Text>
         </View>
 
-        {/* Body */}
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 450 }}
-          style={{ paddingHorizontal: Spacing.lg, paddingTop: 24 }}
-        >
-          {/* Rating Row */}
+        {/* ─── "Expand Your Energy" Section (Mandatory Spec) ─── */}
+        <View style={{ paddingHorizontal: Spacing.xl, marginBottom: 24 }}>
           <View
             style={{
               flexDirection: "row",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 8,
-              marginBottom: 24,
+              marginBottom: 10,
             }}
           >
-            <Text style={{ color: Colors.glow, fontSize: 22, fontWeight: "800" }}>
-              {facility.rating.toFixed(1)}
-            </Text>
-            <Text style={{ color: Colors.tertiary, fontSize: 13 }}>
-              / 5.0 · {facility.review_count} reviews
-            </Text>
-            {facility.distance_meters !== undefined && (
-              <Text
-                style={{
-                  marginLeft: "auto",
-                  color: Colors.secondary,
-                  fontSize: 12,
-                }}
-              >
-                {(facility.distance_meters / 1000).toFixed(1)} km
-              </Text>
-            )}
-          </View>
-
-          {/* Description */}
-          {facility.description && (
             <Text
               style={{
-                color: Colors.secondary,
-                fontSize: 14,
-                lineHeight: 22,
-                marginBottom: 28,
+                color: Colors.olive,
+                fontSize: 11,
+                fontWeight: "800",
+                letterSpacing: 1.5,
               }}
             >
-              {facility.description}
+              EXPAND YOUR ENERGY PROTOCOLS
             </Text>
-          )}
+          </View>
 
-          {/* Court & Activity Reservation Section */}
-          <View
-            style={{
-              backgroundColor: Colors.surface,
-              borderRadius: 16,
-              padding: 18,
-              borderWidth: 1,
-              borderColor: bookedSuccess ? Colors.success : Colors.border,
-              marginBottom: 28,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12,
-              }}
-            >
-              <Text
+          <View style={{ gap: 10 }}>
+            {(facility.expand_activities || [
+              {
+                id: "def-1",
+                title: "Nordic Contrast Plunge & Dry Sauna",
+                category: "recovery",
+                durationMinutes: 45,
+                description: "3°C cold plunge paired with 85°C heat chamber for rapid lactic acid and lymphatic clearance.",
+              },
+              {
+                id: "def-2",
+                title: "Cadence Drill & Dynamic Movement Flush",
+                category: "endurance",
+                durationMinutes: 30,
+                description: "High-cadence mobility and stride activation on turf.",
+              },
+            ]).map((activity) => (
+              <View
+                key={activity.id}
                 style={{
-                  color: Colors.spark,
-                  fontSize: 11,
-                  fontWeight: "700",
-                  letterSpacing: 2,
+                  backgroundColor: Colors.sand,
+                  borderRadius: 16,
+                  padding: 16,
+                  borderWidth: 1,
+                  borderColor: Colors.sandDark,
+                  borderLeftWidth: 3.5,
+                  borderLeftColor:
+                    activity.category === "recovery"
+                      ? Colors.camel
+                      : Colors.olive,
                 }}
               >
-                RESERVE COURT / SESSION
-              </Text>
-              {bookedSuccess && (
                 <View
                   style={{
-                    backgroundColor: Colors.success + "22",
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
-                    borderRadius: 6,
-                  }}
-                >
-                  <Text style={{ color: Colors.success, fontSize: 10, fontWeight: "700" }}>
-                    ✓ RESERVED
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Sport selection */}
-            <Text style={{ color: Colors.secondary, fontSize: 11, marginBottom: 8 }}>
-              SELECT DISCIPLINE
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
-              {facility.primary_sports.map((sp, idx) => (
-                <TouchableOpacity
-                  key={sp}
-                  onPress={() => { tap(); setSelectedSportIndex(idx); }}
-                  style={{
-                    marginRight: 8,
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
-                    borderRadius: 8,
-                    backgroundColor: selectedSportIndex === idx ? Colors.glow : Colors.elevated,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 4,
                   }}
                 >
                   <Text
                     style={{
-                      color: selectedSportIndex === idx ? Colors.obsidian : Colors.secondary,
-                      fontSize: 12,
-                      fontWeight: "700",
+                      color: Colors.espresso,
+                      fontSize: 14,
+                      fontWeight: "800",
                     }}
                   >
-                    {sp.toUpperCase()}
+                    {activity.title}
                   </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {/* Time Slot selection */}
-            <Text style={{ color: Colors.secondary, fontSize: 11, marginBottom: 8 }}>
-              SELECT TIME SLOT (TODAY)
-            </Text>
-            <View style={{ gap: 6, marginBottom: 16 }}>
-              {SAMPLE_SLOTS.map((slot) => {
-                const isSelected = selectedSlot.start === slot.start && selectedSlot.end === slot.end;
-                return (
-                  <TouchableOpacity
-                    key={slot.start + slot.end}
-                    onPress={() => { tap(); setSelectedSlot(slot); }}
+                  <View
                     style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      paddingHorizontal: 14,
-                      paddingVertical: 10,
-                      borderRadius: 10,
-                      backgroundColor: isSelected ? Colors.glow + "20" : Colors.elevated,
-                      borderWidth: 1,
-                      borderColor: isSelected ? Colors.glow : Colors.border,
+                      backgroundColor: Colors.softChalk,
+                      paddingHorizontal: 7,
+                      paddingVertical: 2,
+                      borderRadius: 4,
                     }}
                   >
                     <Text
                       style={{
-                        color: isSelected ? Colors.glow : Colors.primary,
-                        fontSize: 13,
+                        color: Colors.espresso,
+                        fontSize: 10,
                         fontWeight: "700",
+                      }}
+                    >
+                      {activity.durationMinutes} MIN
+                    </Text>
+                  </View>
+                </View>
+                <Text
+                  style={{
+                    color: Colors.espressoMuted,
+                    fontSize: 12.5,
+                    lineHeight: 18,
+                  }}
+                >
+                  {activity.description}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* ─── Reserve Court / Slot Section ─── */}
+        <View style={{ paddingHorizontal: Spacing.xl, marginBottom: 24 }}>
+          <Text
+            style={{
+              color: Colors.espressoMuted,
+              fontSize: 11,
+              fontWeight: "800",
+              letterSpacing: 1.5,
+              marginBottom: 10,
+            }}
+          >
+            SELECT SLOT · LOCK IN CADENCE
+          </Text>
+
+          <View
+            style={{
+              backgroundColor: Colors.sand,
+              borderRadius: 20,
+              padding: 18,
+              borderWidth: 1,
+              borderColor: Colors.sandDark,
+            }}
+          >
+            <View style={{ gap: 8, marginBottom: 16 }}>
+              {SAMPLE_SLOTS.map((slot) => {
+                const isSelected = selectedSlot === slot;
+                return (
+                  <TouchableOpacity
+                    key={slot.label + slot.start}
+                    onPress={() => {
+                      tap();
+                      setSelectedSlot(slot);
+                    }}
+                    style={{
+                      backgroundColor: isSelected ? Colors.olive : Colors.softChalk,
+                      borderRadius: 12,
+                      paddingVertical: 12,
+                      paddingHorizontal: 14,
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderWidth: 1,
+                      borderColor: isSelected ? Colors.olive : Colors.sandDark,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: isSelected ? Colors.chalk : Colors.espresso,
+                        fontSize: 13,
+                        fontWeight: "800",
                       }}
                     >
                       {slot.start} – {slot.end}
                     </Text>
-                    <Text style={{ color: isSelected ? Colors.glow : Colors.tertiary, fontSize: 12 }}>
+                    <Text
+                      style={{
+                        color: isSelected ? Colors.sandLight : Colors.espressoMuted,
+                        fontSize: 12,
+                        fontWeight: "600",
+                      }}
+                    >
                       {slot.label}
                     </Text>
                   </TouchableOpacity>
@@ -377,101 +511,86 @@ export default function FacilityDetailScreen() {
               })}
             </View>
 
-            {/* Confirmation Note */}
-            <Text
-              style={{
-                color: Colors.tertiary,
-                fontSize: 11,
-                lineHeight: 16,
-                marginBottom: 14,
-              }}
-            >
-              • 30 minutes after your {selectedSlot.start}-{selectedSlot.end} session completes, Endorphix will push a notification to slide and record your somatic energy level.
-            </Text>
-
-            {/* Reserve Button */}
             <TouchableOpacity
               onPress={handleReserve}
-              activeOpacity={0.85}
+              activeOpacity={0.88}
               style={{
-                backgroundColor: bookedSuccess ? Colors.success : Colors.glow,
-                borderRadius: 12,
-                paddingVertical: 14,
+                backgroundColor: bookedSuccess ? Colors.olive : Colors.navy,
+                borderRadius: 14,
+                paddingVertical: 15,
                 alignItems: "center",
               }}
             >
               <Text
                 style={{
-                  color: Colors.obsidian,
-                  fontSize: 13,
+                  color: Colors.chalk,
+                  fontSize: 14,
                   fontWeight: "800",
-                  letterSpacing: 1.2,
+                  letterSpacing: 0.5,
                 }}
               >
-                {bookedSuccess ? "RESERVE ANOTHER SLOT" : `RESERVE ${selectedSlot.start} - ${selectedSlot.end}`}
+                {bookedSuccess ? "✓ Slot Confirmed (30m Alert Set)" : "Reserve & Schedule Post-Activity Alert →"}
               </Text>
             </TouchableOpacity>
-          </View>
 
-          {/* Timetable */}
+            {bookedSuccess && (
+              <View
+                style={{
+                  marginTop: 12,
+                  backgroundColor: Colors.softChalk,
+                  borderRadius: 12,
+                  padding: 12,
+                  borderWidth: 1,
+                  borderColor: Colors.sandDark,
+                }}
+              >
+                <Text style={{ color: Colors.espresso, fontSize: 12, fontWeight: "700", marginBottom: 4 }}>
+                  ● 30m Post-Activity Protocol Active
+                </Text>
+                <Text style={{ color: Colors.espressoMuted, fontSize: 11.5, lineHeight: 16, marginBottom: 10 }}>
+                  Half an hour after your {selectedSlot.start}–{selectedSlot.end} session, an in-phone alert will prompt you to slide your Endorphin Bar.
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    confirm();
+                    simulate30MinutesPostSession(lastBookingId || undefined);
+                    showAlert(
+                      "30m Post-Activity Simulated",
+                      "The 30-minute post-activity cool-down has elapsed. Notice the in-phone alert banner at the top of your screen! Tap it to open the After-Activity Energy Bar."
+                    );
+                  }}
+                  style={{
+                    backgroundColor: Colors.terracotta,
+                    borderRadius: 10,
+                    paddingVertical: 10,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: Colors.chalk, fontSize: 12, fontWeight: "800" }}>
+                    ⚡ Test 30m Post-Session Alert Now
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Operating Hours Timetable */}
+        <View style={{ paddingHorizontal: Spacing.xl }}>
           <Text
             style={{
-              color: Colors.secondary,
+              color: Colors.espressoMuted,
               fontSize: 11,
-              fontWeight: "700",
-              letterSpacing: 2,
-              marginBottom: 12,
+              fontWeight: "800",
+              letterSpacing: 1.5,
+              marginBottom: 10,
             }}
           >
-            HOURS
+            OPERATIONAL TIMETABLE
           </Text>
           <TimetableCard timetable={facility.timetable} />
-
-          {/* Action Buttons */}
-          <View style={{ flexDirection: "row", gap: 12, marginTop: 28 }}>
-            {facility.phone && (
-              <TouchableOpacity
-                onPress={handleCall}
-                activeOpacity={0.8}
-                style={{
-                  flex: 1,
-                  backgroundColor: Colors.surface,
-                  borderWidth: 1,
-                  borderColor: Colors.border,
-                  borderRadius: 14,
-                  paddingVertical: 16,
-                  alignItems: "center",
-                }}
-              >
-                <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: "600" }}>
-                  📞 Call
-                </Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              onPress={handleDirections}
-              activeOpacity={0.8}
-              style={{
-                flex: 1,
-                backgroundColor: Colors.glow,
-                borderRadius: 14,
-                paddingVertical: 16,
-                alignItems: "center",
-              }}
-            >
-              <Text
-                style={{
-                  color: Colors.obsidian,
-                  fontSize: 13,
-                  fontWeight: "700",
-                  letterSpacing: 1,
-                }}
-              >
-                ↗ Directions
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </MotiView>
+        </View>
       </ScrollView>
     </View>
   );

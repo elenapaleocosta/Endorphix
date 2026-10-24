@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { MotiView } from "moti";
 import { useBookingStore } from "@/store/booking.store";
 import { useHaptics } from "@/hooks/useHaptics";
-import { Colors, Spacing } from "@/constants";
+import { Colors } from "@/constants";
 
 export function SystemNotificationBanner() {
   const router = useRouter();
@@ -21,7 +21,7 @@ export function SystemNotificationBanner() {
     if (targetBooking) {
       openEnergyLoggingForBooking(targetBooking);
     }
-    router.push("/(tabs)/energy");
+    router.push("/energy/modal");
   };
 
   const handleDismiss = (e: any) => {
@@ -32,32 +32,27 @@ export function SystemNotificationBanner() {
 
   return (
     <MotiView
-      from={{ opacity: 0, translateY: -40 }}
+      from={{ opacity: 0, translateY: -20 }}
       animate={{ opacity: 1, translateY: 0 }}
-      exit={{ opacity: 0, translateY: -30 }}
-      transition={{ type: "spring", damping: 18 }}
+      exit={{ opacity: 0, translateY: -20 }}
+      transition={{ type: "timing", duration: 220 }}
       style={{
         position: "absolute",
         top: Platform.OS === "web" ? 16 : 52,
         left: 16,
         right: 16,
         zIndex: 9999,
-        elevation: 10,
       }}
     >
       <TouchableOpacity
         onPress={handleBannerPress}
         activeOpacity={0.92}
         style={{
-          backgroundColor: "#161622",
+          backgroundColor: Colors.charcoal,
           borderRadius: 16,
           padding: 16,
-          borderWidth: 1.5,
-          borderColor: Colors.glow,
-          shadowColor: Colors.glow,
-          shadowOpacity: 0.4,
-          shadowRadius: 16,
-          shadowOffset: { width: 0, height: 4 },
+          borderWidth: 1,
+          borderColor: Colors.terracotta,
         }}
       >
         <View
@@ -71,21 +66,21 @@ export function SystemNotificationBanner() {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <View
               style={{
-                width: 8,
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: Colors.glow,
+                width: 7,
+                height: 7,
+                borderRadius: 3.5,
+                backgroundColor: Colors.terracotta,
               }}
             />
             <Text
               style={{
-                color: Colors.glow,
+                color: Colors.terracottaLight,
                 fontSize: 10,
                 fontWeight: "800",
                 letterSpacing: 1.5,
               }}
             >
-              POST-SESSION NOTIFICATION · 30M LATER
+              IN-PHONE ALERT · 30M POST-ACTIVITY
             </Text>
           </View>
 
@@ -93,21 +88,21 @@ export function SystemNotificationBanner() {
             onPress={handleDismiss}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             style={{
-              paddingHorizontal: 6,
-              paddingVertical: 2,
+              paddingHorizontal: 8,
+              paddingVertical: 3,
               borderRadius: 6,
-              backgroundColor: Colors.elevated,
+              backgroundColor: Colors.espressoMuted + "44",
             }}
           >
-            <Text style={{ color: Colors.secondary, fontSize: 11 }}>✕</Text>
+            <Text style={{ color: Colors.sand, fontSize: 11, fontWeight: "700" }}>✕</Text>
           </TouchableOpacity>
         </View>
 
         <Text
           style={{
-            color: Colors.primary,
+            color: Colors.chalk,
             fontSize: 15,
-            fontWeight: "700",
+            fontWeight: "800",
             marginBottom: 4,
           }}
         >
@@ -116,7 +111,7 @@ export function SystemNotificationBanner() {
 
         <Text
           style={{
-            color: Colors.secondary,
+            color: Colors.sandLight,
             fontSize: 13,
             lineHeight: 18,
             marginBottom: 10,
@@ -130,19 +125,22 @@ export function SystemNotificationBanner() {
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "center",
+            borderTopWidth: 1,
+            borderTopColor: Colors.espressoMuted + "33",
+            paddingTop: 8,
           }}
         >
           <Text
             style={{
-              color: Colors.glow,
+              color: Colors.oliveLight,
               fontSize: 12,
-              fontWeight: "700",
+              fontWeight: "800",
               letterSpacing: 0.5,
             }}
           >
-            Tap to open Energy Bar →
+            Tap to slide After-Activity Energy Bar →
           </Text>
-          <Text style={{ color: Colors.tertiary, fontSize: 10 }}>
+          <Text style={{ color: Colors.sandDark, fontSize: 10 }}>
             {pendingNotification.timestamp}
           </Text>
         </View>

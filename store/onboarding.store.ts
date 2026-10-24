@@ -9,6 +9,7 @@ interface OnboardingState {
   isLoading: boolean;
   checkFTUE: () => Promise<void>;
   completeFTUE: () => Promise<void>;
+  resetFTUE: () => Promise<void>;
   setSlide: (index: number) => void;
 }
 
@@ -32,6 +33,15 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
       set({ hasCompletedFTUE: true });
     } catch (e) {
       console.error("[Onboarding] Failed to persist FTUE state:", e);
+    }
+  },
+
+  resetFTUE: async () => {
+    try {
+      await AsyncStorage.removeItem(FTUE_KEY);
+      set({ hasCompletedFTUE: false, currentSlide: 0 });
+    } catch (e) {
+      console.error("[Onboarding] Failed to reset FTUE state:", e);
     }
   },
 

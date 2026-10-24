@@ -1,28 +1,37 @@
 import { create } from "zustand";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { User } from "@/types";
 
+const STORAGE_KEY_AUTH = "endorphix_auth_user";
+
+export const DEFAULT_AVATAR =
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80";
+
 const DEFAULT_ATHLETE: User = {
-  id: "athlete-preview",
-  email: "athlete@endorphix.luxury",
-  username: "EndorphixAthlete",
-  display_name: "Alex Vance",
-  bio: "Endurance cyclist & somatic vitality seeker. Building high-cadence momentum daily.",
-  avatar_url: "",
-  streak_current: 7,
-  streak_longest: 21,
-  lifetime_sessions: 42,
+  id: "athlete-julian",
+  email: "julian@endorphix.app",
+  username: "julian_sterling",
+  first_name: "Julian",
+  last_name: "Sterling",
+  nickname: "The Cadence",
+  display_name: "Julian Sterling",
+  bio: "Country club tennis competitor & high-cadence endurance cyclist. Channeling daily endorphins within 50km.",
+  avatar_url: DEFAULT_AVATAR,
+  streak_current: 9,
+  streak_longest: 24,
+  lifetime_sessions: 48,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
 
-interface NotificationPreferences {
+export interface NotificationPreferences {
   pushNotifications: boolean;
   emailUpdates: boolean;
   activityAlerts: boolean;
   marketingMessages: boolean;
 }
 
-interface PrivacyPreferences {
+export interface PrivacyPreferences {
   profileVisibility: "public" | "private";
 }
 
@@ -55,15 +64,26 @@ export const useAuthStore = create<AuthState>((set) => ({
     profileVisibility: "public",
   },
 
-  setUser: (user) =>
-    set({ user, isAuthenticated: !!user, isLoading: false }),
+  setUser: (user) => {
+    if (user) {
+      AsyncStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(user)).catch(() => {});
+    } else {
+      AsyncStorage.removeItem(STORAGE_KEY_AUTH).catch(() => {});
+    }
+    set({ user, isAuthenticated: !!user, isLoading: false });
+  },
 
   updateUserProfile: (updates) =>
-    set((state) => ({
-      user: state.user
-        ? { ...state.user, ...updates, updated_at: new Date().toISOString() }
-        : null,
-    })),
+    set((state) => {
+      if (!state.user) return state;
+      const updated: User = {
+        ...state.user,
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+      AsyncStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(updated)).catch(() => {});
+      return { user: updated };
+    }),
 
   setNotifications: (prefs) =>
     set((state) => ({
@@ -77,9 +97,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setLoading: (isLoading) => set({ isLoading }),
 
-  signOut: () =>
-    set({ user: null, isAuthenticated: false, isLoading: false }),
+  signOut: () => {
+    AsyncStorage.removeItem(STORAGE_KEY_AUTH).catch(() => {});
+    set({ user: null, isAuthenticated: false });
+  },
 
-  deleteAccount: () =>
-    set({ user: null, isAuthenticated: false, isLoading: false }),
+  deleteAccount: () => {
+    AsyncStorage.removeItem(STORAGE_KEY_AUTH).catch(() => {});
+    set({ user: null, isAuthenticated: false });
+  },
 }));

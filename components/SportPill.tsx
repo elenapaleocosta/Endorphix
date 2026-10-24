@@ -6,9 +6,15 @@ interface SportPillProps {
   label: string;
   selected: boolean;
   onPress: () => void;
+  accent?: string;
 }
 
-export function SportPill({ label, selected, onPress }: SportPillProps) {
+export function SportPill({
+  label,
+  selected,
+  onPress,
+  accent = Colors.olive,
+}: SportPillProps) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -16,17 +22,19 @@ export function SportPill({ label, selected, onPress }: SportPillProps) {
       style={{
         paddingHorizontal: 16,
         paddingVertical: 9,
-        borderRadius: 10,
-        backgroundColor: selected ? Colors.glow : Colors.surface,
+        borderRadius: 12,
+        backgroundColor: selected ? accent : Colors.sand,
         borderWidth: 1,
-        borderColor: selected ? Colors.glow : Colors.border,
+        borderColor: selected ? accent : Colors.sandDark,
+        marginRight: 8,
       }}
     >
       <Text
         style={{
-          color: selected ? Colors.obsidian : Colors.secondary,
+          color: selected ? Colors.chalk : Colors.espresso,
           fontSize: 13,
-          fontWeight: selected ? "700" : "500",
+          fontWeight: selected ? "800" : "600",
+          letterSpacing: 0.3,
         }}
       >
         {label}

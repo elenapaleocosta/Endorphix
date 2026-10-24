@@ -40,18 +40,19 @@ export function formatDistance(meters: number): string {
 
 /** Maps energy score (1-100) to a semantic label. */
 export function energyLabel(score: number): string {
-  if (score >= 90) return "Peak";
-  if (score >= 70) return "Strong";
-  if (score >= 50) return "Steady";
-  if (score >= 30) return "Low";
+  if (score >= 90) return "Peak Vitality";
+  if (score >= 75) return "High Euphoric Flow";
+  if (score >= 50) return "Active Flow";
+  if (score >= 25) return "Grounded";
   return "Depleted";
 }
 
-/** Maps energy score to a colour from the palette. */
+/** Maps energy score to an earthy luxury color from the palette. */
 export function energyColor(score: number): string {
-  if (score >= 70) return Colors.glow;
-  if (score >= 40) return Colors.spark;
-  return Colors.secondary;
+  if (score >= 85) return Colors.terracotta;
+  if (score >= 70) return Colors.olive;
+  if (score >= 50) return Colors.camel;
+  return Colors.espressoMuted;
 }
 
 /** Clamps a number between min and max. */

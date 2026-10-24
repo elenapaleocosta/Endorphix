@@ -4,33 +4,43 @@ import { Colors } from "@/constants";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useLocation } from "@/hooks/useLocation";
 
-// ─── Tab Icon ──────────────────────────────────────────────────────────────────
+// ─── Custom Tab Icon ──────────────────────────────────────────────────────────
 
 function TabIcon({
   label,
   symbol,
   focused,
+  activeColor = Colors.olive,
 }: {
   label: string;
   symbol: string;
   focused: boolean;
+  activeColor?: string;
 }) {
   return (
-    <View style={{ alignItems: "center", justifyContent: "center", gap: 3, paddingTop: 4 }}>
+    <View
+      style={{
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 3,
+        paddingTop: 6,
+      }}
+    >
       <Text
         style={{
-          fontSize: 20,
-          opacity: focused ? 1 : 0.4,
+          fontSize: 18,
+          color: focused ? activeColor : Colors.espressoMuted,
+          opacity: focused ? 1 : 0.65,
         }}
       >
         {symbol}
       </Text>
       <Text
         style={{
-          fontSize: 9,
-          fontWeight: "700",
+          fontSize: 10,
+          fontWeight: "800",
           letterSpacing: 1.5,
-          color: focused ? Colors.glow : Colors.tertiary,
+          color: focused ? activeColor : Colors.espressoMuted,
         }}
       >
         {label}
@@ -39,12 +49,12 @@ function TabIcon({
   );
 }
 
-// ─── Layout ────────────────────────────────────────────────────────────────────
+// ─── Tabs Layout (Streamlined: Discover · Spark · Passport) ───────────────────
 
 export default function TabsLayout() {
   const { tap } = useHaptics();
 
-  // Initialize location watching at the navigator level
+  // Watch location coordinates at root tab level
   useLocation();
 
   return (
@@ -52,15 +62,15 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.void,
-          borderTopColor: Colors.border,
+          backgroundColor: Colors.chalk,
+          borderTopColor: Colors.sandDark,
           borderTopWidth: 1,
-          height: Platform.OS === "ios" ? 88 : 68,
-          paddingTop: 8,
-          paddingBottom: Platform.OS === "ios" ? 28 : 10,
+          height: Platform.OS === "ios" ? 88 : 70,
+          paddingTop: 6,
+          paddingBottom: Platform.OS === "ios" ? 28 : 12,
         },
-        tabBarActiveTintColor: Colors.glow,
-        tabBarInactiveTintColor: Colors.tertiary,
+        tabBarActiveTintColor: Colors.olive,
+        tabBarInactiveTintColor: Colors.espressoMuted,
         tabBarShowLabel: false,
       }}
     >
@@ -68,29 +78,46 @@ export default function TabsLayout() {
         name="discover"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="DISCOVER" symbol="◎" focused={focused} />
+            <TabIcon
+              label="DISCOVER"
+              symbol="◎"
+              focused={focused}
+              activeColor={Colors.olive}
+            />
           ),
-          tabBarAccessibilityLabel: "Discover",
+          tabBarAccessibilityLabel: "Discover Facilities",
         }}
         listeners={{ tabPress: () => tap() }}
       />
+
       <Tabs.Screen
-        name="energy"
+        name="spark"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="ENERGY" symbol="◈" focused={focused} />
+            <TabIcon
+              label="SPARK"
+              symbol="⚡"
+              focused={focused}
+              activeColor={Colors.terracotta}
+            />
           ),
-          tabBarAccessibilityLabel: "Energy Log",
+          tabBarAccessibilityLabel: "Spark Surprise Me",
         }}
         listeners={{ tabPress: () => tap() }}
       />
+
       <Tabs.Screen
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="PROFILE" symbol="◉" focused={focused} />
+            <TabIcon
+              label="PASSPORT"
+              symbol="◉"
+              focused={focused}
+              activeColor={Colors.navy}
+            />
           ),
-          tabBarAccessibilityLabel: "Profile",
+          tabBarAccessibilityLabel: "Vitality Passport Profile",
         }}
         listeners={{ tabPress: () => tap() }}
       />

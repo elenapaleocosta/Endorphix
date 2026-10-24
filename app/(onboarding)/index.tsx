@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   type ListRenderItemInfo,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import Animated, {
@@ -18,50 +19,57 @@ import Animated, {
 import { MotiView } from "moti";
 import { useOnboardingStore } from "@/store/onboarding.store";
 import { useHaptics } from "@/hooks/useHaptics";
-import { Colors, Spacing } from "@/constants";
+import { Colors, Spacing, BRAND_PHILOSOPHY } from "@/constants";
 
-const { width: SCREEN_W } = Dimensions.get("window");
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
 interface Slide {
   id: string;
   eyebrow: string;
+  quote?: string;
   title: string;
   subtitle: string;
   accent: string;
+  secondaryAccent: string;
 }
 
 const SLIDES: Slide[] = [
   {
     id: "1",
-    eyebrow: "WELCOME",
-    title: "Move with\nprecision.",
+    eyebrow: "THE LUXURY OF MOVEMENT",
+    quote: `"${BRAND_PHILOSOPHY}"`,
+    title: "Movement is\na sacred gift.",
     subtitle:
-      "Endorphix maps elite athletic facilities within 50km of wherever you stand.",
-    accent: Colors.glow,
+      "endorphix is a refined catalyst for high-intensity athletes who need their daily dose of endorphins whether at home or traveling.",
+    accent: Colors.olive,
+    secondaryAccent: Colors.sand,
   },
   {
     id: "2",
-    eyebrow: "DISCOVER",
-    title: "Sport-first.\nDestination-first.",
+    eyebrow: "50KM RADIUS PROXIMITY",
+    title: "Bridging desire\nand action.",
     subtitle:
-      "Search by discipline or let a destination build your perfect multi-day training tour.",
-    accent: Colors.spark,
+      "Dual-path discovery across Water, Land, and Mountain realms with live OpenStreetMap coordinates and Google Places data.",
+    accent: Colors.navy,
+    secondaryAccent: Colors.camel,
   },
   {
     id: "3",
-    eyebrow: "THE SPARK",
-    title: "Surprise me.",
+    eyebrow: "THE SPARK ENGINE",
+    title: "Eliminate choice\nparalysis.",
     subtitle:
-      "One tap surfaces the highest-rated venue near you and eliminates choice paralysis.",
-    accent: Colors.pulse,
+      "A single tactile tap queries PostGIS for verified top-rated venues (4.5★+) to ignite spontaneous athletic action.",
+    accent: Colors.terracotta,
+    secondaryAccent: Colors.sand,
   },
   {
     id: "4",
-    eyebrow: "ENERGY",
-    title: "Feel your\nmomentum.",
+    eyebrow: "SOMATIC ENDORPHIN WAVE",
+    title: "Feel your\nmomentum rise.",
     subtitle:
-      "Log somatic energy on a 1–100 scale. Watch your personal wave rise over time.",
-    accent: Colors.success,
+      "Log your subjective Endorphin High on a 1–100 scale without calorie counting. Visualized via a matte D3/SVG wave tracking your streaks.",
+    accent: Colors.olive,
+    secondaryAccent: Colors.terracotta,
   },
 ];
 
@@ -100,201 +108,239 @@ export default function OnboardingScreen() {
     router.replace("/(auth)/sign-in");
   };
 
-  const isLast = currentSlide === SLIDES.length - 1;
-
-  return (
-    <View style={{ flex: 1, backgroundColor: Colors.obsidian }}>
-      {/* Slides */}
-      <AnimatedFlatList
-        ref={listRef}
-        data={SLIDES}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={16}
-        onScroll={scrollHandler}
-        renderItem={({ item, index }: ListRenderItemInfo<Slide>) => (
-          <SlideItem slide={item} index={index} scrollX={scrollX} />
-        )}
-      />
-
-      {/* Pagination & CTA */}
+  const renderSlide = ({ item, index }: ListRenderItemInfo<Slide>) => {
+    return (
       <View
         style={{
-          position: "absolute",
-          bottom: 60,
-          left: 0,
-          right: 0,
-          paddingHorizontal: Spacing.lg,
+          width: SCREEN_W,
+          paddingHorizontal: Spacing.xl,
+          justifyContent: "center",
+          paddingBottom: 80,
         }}
       >
-        {/* Dots */}
-        <View
+        <MotiView
+          from={{ opacity: 0, translateY: 16 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 550, delay: 100 }}
+        >
+          {/* Eyebrow badge */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 20,
+            }}
+          >
+            <View
+              style={{
+                width: 24,
+                height: 2,
+                backgroundColor: item.accent,
+              }}
+            />
+            <Text
+              style={{
+                color: item.accent,
+                fontSize: 11,
+                fontWeight: "800",
+                letterSpacing: 2.5,
+              }}
+            >
+              {item.eyebrow}
+            </Text>
+          </View>
+
+          {/* Philosophy Quote Card (for Slide 1) */}
+          {item.quote && (
+            <View
+              style={{
+                backgroundColor: Colors.sand,
+                borderRadius: 16,
+                padding: 18,
+                marginBottom: 22,
+                borderLeftWidth: 3,
+                borderLeftColor: Colors.olive,
+              }}
+            >
+              <Text
+                style={{
+                  color: Colors.espresso,
+                  fontSize: 14,
+                  lineHeight: 22,
+                  fontStyle: "italic",
+                  fontWeight: "600",
+                }}
+              >
+                {item.quote}
+              </Text>
+            </View>
+          )}
+
+          {/* Title */}
+          <Text
+            style={{
+              color: Colors.espresso,
+              fontSize: 38,
+              fontWeight: "800",
+              lineHeight: 44,
+              letterSpacing: -1,
+              marginBottom: 16,
+            }}
+          >
+            {item.title}
+          </Text>
+
+          {/* Subtitle */}
+          <Text
+            style={{
+              color: Colors.espressoMuted,
+              fontSize: 16,
+              lineHeight: 24,
+              fontWeight: "500",
+            }}
+          >
+            {item.subtitle}
+          </Text>
+        </MotiView>
+      </View>
+    );
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: Colors.chalk }}>
+      {/* Top Brand Header */}
+      <View
+        style={{
+          paddingTop: Platform.OS === "ios" ? 60 : 44,
+          paddingHorizontal: Spacing.xl,
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          zIndex: 10,
+        }}
+      >
+        <Text
           style={{
-            flexDirection: "row",
-            gap: 6,
-            marginBottom: Spacing.lg,
+            color: Colors.espresso,
+            fontSize: 24,
+            fontWeight: "800",
+            letterSpacing: -0.5,
           }}
         >
-          {SLIDES.map((_, i) => (
-            <PaginationDot key={i} index={i} scrollX={scrollX} />
-          ))}
-        </View>
+          endorphix
+        </Text>
 
-        {/* Button */}
-        <MotiView
-          from={{ opacity: 0, translateY: 12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 400 }}
-        >
+        {currentSlide < SLIDES.length - 1 && (
           <TouchableOpacity
-            onPress={isLast ? handleGetStarted : handleNext}
-            activeOpacity={0.8}
-            style={{
-              backgroundColor: Colors.glow,
-              borderRadius: 16,
-              paddingVertical: 18,
-              alignItems: "center",
-            }}
+            onPress={handleGetStarted}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Text
               style={{
-                color: Colors.obsidian,
-                fontSize: 15,
+                color: Colors.espressoMuted,
+                fontSize: 12,
                 fontWeight: "700",
                 letterSpacing: 1.5,
               }}
             >
-              {isLast ? "BEGIN" : "CONTINUE"}
+              SKIP
             </Text>
           </TouchableOpacity>
-        </MotiView>
+        )}
+      </View>
+
+      {/* Slide Deck */}
+      <AnimatedFlatList
+        ref={listRef}
+        data={SLIDES}
+        keyExtractor={(item) => item.id}
+        renderItem={renderSlide}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        bounces={false}
+        style={{ flex: 1 }}
+      />
+
+      {/* Bottom Navigation & Tactile Indicators */}
+      <View
+        style={{
+          paddingHorizontal: Spacing.xl,
+          paddingBottom: Platform.OS === "ios" ? 48 : 32,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        {/* Pagination Dots */}
+        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+          {SLIDES.map((_, index) => {
+            const isActive = index === currentSlide;
+            return (
+              <View
+                key={index}
+                style={{
+                  width: isActive ? 28 : 8,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: isActive ? Colors.olive : Colors.sandDark,
+                }}
+              />
+            );
+          })}
+        </View>
+
+        {/* CTA Button */}
+        {currentSlide === SLIDES.length - 1 ? (
+          <TouchableOpacity
+            onPress={handleGetStarted}
+            activeOpacity={0.88}
+            style={{
+              backgroundColor: Colors.olive,
+              paddingVertical: 14,
+              paddingHorizontal: 28,
+              borderRadius: 14,
+            }}
+          >
+            <Text
+              style={{
+                color: Colors.chalk,
+                fontSize: 14,
+                fontWeight: "800",
+                letterSpacing: 0.8,
+              }}
+            >
+              Enter endorphix →
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={handleNext}
+            activeOpacity={0.88}
+            style={{
+              backgroundColor: Colors.sand,
+              borderWidth: 1,
+              borderColor: Colors.sandDark,
+              paddingVertical: 14,
+              paddingHorizontal: 24,
+              borderRadius: 14,
+            }}
+          >
+            <Text
+              style={{
+                color: Colors.espresso,
+                fontSize: 14,
+                fontWeight: "700",
+              }}
+            >
+              Continue →
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
-  );
-}
-
-// ─── Slide Item ────────────────────────────────────────────────────────────────
-
-function SlideItem({
-  slide,
-  index,
-  scrollX,
-}: {
-  slide: Slide;
-  index: number;
-  scrollX: Animated.SharedValue<number>;
-}) {
-  const animStyle = useAnimatedStyle(() => {
-    const inputRange = [
-      (index - 1) * SCREEN_W,
-      index * SCREEN_W,
-      (index + 1) * SCREEN_W,
-    ];
-    const opacity = interpolate(
-      scrollX.value,
-      inputRange,
-      [0, 1, 0],
-      Extrapolation.CLAMP
-    );
-    const translateY = interpolate(
-      scrollX.value,
-      inputRange,
-      [24, 0, 24],
-      Extrapolation.CLAMP
-    );
-    return { opacity, transform: [{ translateY }] };
-  });
-
-  return (
-    <Animated.View
-      style={[
-        {
-          width: SCREEN_W,
-          flex: 1,
-          paddingHorizontal: Spacing.lg,
-          paddingTop: 120,
-        },
-        animStyle,
-      ]}
-    >
-      <Text
-        style={{
-          color: slide.accent,
-          fontSize: 11,
-          fontWeight: "700",
-          letterSpacing: 3,
-          marginBottom: 16,
-        }}
-      >
-        {slide.eyebrow}
-      </Text>
-      <Text
-        style={{
-          color: Colors.primary,
-          fontSize: 42,
-          fontWeight: "800",
-          lineHeight: 48,
-          marginBottom: 20,
-        }}
-      >
-        {slide.title}
-      </Text>
-      <Text
-        style={{
-          color: Colors.secondary,
-          fontSize: 16,
-          lineHeight: 26,
-          maxWidth: 300,
-        }}
-      >
-        {slide.subtitle}
-      </Text>
-    </Animated.View>
-  );
-}
-
-// ─── Pagination Dot ────────────────────────────────────────────────────────────
-
-function PaginationDot({
-  index,
-  scrollX,
-}: {
-  index: number;
-  scrollX: Animated.SharedValue<number>;
-}) {
-  const style = useAnimatedStyle(() => {
-    const inputRange = [
-      (index - 1) * SCREEN_W,
-      index * SCREEN_W,
-      (index + 1) * SCREEN_W,
-    ];
-    const width = interpolate(
-      scrollX.value,
-      inputRange,
-      [6, 24, 6],
-      Extrapolation.CLAMP
-    );
-    const opacity = interpolate(
-      scrollX.value,
-      inputRange,
-      [0.3, 1, 0.3],
-      Extrapolation.CLAMP
-    );
-    return { width, opacity };
-  });
-
-  return (
-    <Animated.View
-      style={[
-        {
-          height: 6,
-          borderRadius: 3,
-          backgroundColor: Colors.glow,
-        },
-        style,
-      ]}
-    />
   );
 }

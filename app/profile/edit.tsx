@@ -6,20 +6,19 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
-  Alert,
-  Platform,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { MotiView } from "moti";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuthStore, DEFAULT_AVATAR } from "@/store/auth.store";
 import { useHaptics } from "@/hooks/useHaptics";
 import { showAlert } from "@/lib/alert";
 import { Colors, Spacing } from "@/constants";
 
 const AVATAR_PRESETS = [
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+  DEFAULT_AVATAR,
   "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
   "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80",
   "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80",
@@ -31,104 +30,118 @@ export default function EditProfileScreen() {
   const { user, updateUserProfile } = useAuthStore();
 
   const [displayName, setDisplayName] = useState(
-    user?.display_name || user?.username || "Alex Vance"
+    user?.display_name ||
+      (user?.first_name && user?.last_name
+        ? `${user.first_name} ${user.last_name}`
+        : "Julian Sterling")
   );
-  const [username, setUsername] = useState(user?.username || "EndorphixAthlete");
+  const [username, setUsername] = useState(user?.username || "julian_sterling");
   const [bio, setBio] = useState(
     user?.bio ||
-      "Endurance cyclist & somatic vitality seeker. Building high-cadence momentum daily."
+      "Country club tennis competitor & high-cadence endurance cyclist. Channeling daily endorphins within 50km."
   );
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || "");
-  const [isLoadingImage, setIsLoadingImage] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || DEFAULT_AVATAR);
+  const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
   const [errors, setErrors] = useState<{ displayName?: string; username?: string }>({});
 
-  const pickImageFromLibrary = async () => {
+  // ─── Native Media Library Photo Picker ──────────────────────────────────────
+  const handlePickPhoto = async () => {
     tap();
     try {
-      setIsLoadingImage(true);
+      setIsLoadingPhoto(true);
 
-      // Check / request permissions
-      const { status, canAskAgain } =
+      // 1. Request permissions with clear fallback
+      const permissionResult =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-      if (status !== ImagePicker.PermissionStatus.GRANTED) {
-        setIsLoadingImage(false);
+      if (!permissionResult.granted) {
+        setIsLoadingPhoto(false);
         errorHaptic();
         showAlert(
           "Photo Access Required",
-          canAskAgain
-            ? "Endorphix needs access to your photo library to update your Vitality avatar. Please grant photo permission."
-            : "Photo library access is currently disabled. Please enable photo permissions in your device settings.",
-          [{ text: "OK" }]
+          "endorphix requires access to your photo library to update your Vitality Passport portrait. Please enable permission in your device settings."
         );
         return;
       }
 
-      // Launch Native Picker with image restrictions & 1:1 square crop
+      // 2. Launch native image picker: standard formats, single-image limit, square crop
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.85,
-        selectionLimit: 1,
+        allowsMultipleSelection: false,
       });
 
-      setIsLoadingImage(false);
+      setIsLoadingPhoto(false);
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedUri = result.assets[0].uri;
-        success();
         setAvatarUrl(selectedUri);
+        selection();
+        showAlert(
+          "Portrait Selected",
+          "Your custom avatar has been loaded. Tap 'Save Changes' to commit to your Vitality Passport."
+        );
       }
     } catch (err: any) {
-      setIsLoadingImage(false);
+      setIsLoadingPhoto(false);
       errorHaptic();
-      showAlert(
-        "Could Not Load Image",
-        "An unexpected error occurred while accessing the photo album. Please try again."
-      );
+      showAlert("Image Selection Error", err.message || "Failed to access photo gallery.");
     }
   };
 
-  const handleRemoveAvatar = () => {
-    selection();
-    setAvatarUrl("");
+  const handleRevertDefault = () => {
+    tap();
+    setAvatarUrl(DEFAULT_AVATAR);
+    showAlert("Avatar Reset", "Reverted to default endorphix athlete portrait.");
   };
 
-  const validate = () => {
-    const errs: { displayName?: string; username?: string } = {};
-    if (!displayName.trim()) {
-      errs.displayName = "Display Name cannot be blank.";
+  // ─── Validation & Save ──────────────────────────────────────────────────────
+  const validateForm = () => {
+    const newErrors: { displayName?: string; username?: string } = {};
+
+    if (!displayName.trim() || displayName.trim().length < 2) {
+      newErrors.displayName = "Display name must be at least 2 characters.";
     }
-    if (!username.trim()) {
-      errs.username = "Username cannot be blank.";
-    } else if (username.length < 3) {
-      errs.username = "Username must be at least 3 characters.";
-    } else if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
-      errs.username = "Only letters, numbers, and underscores allowed.";
+
+    const cleanUsername = username.trim().toLowerCase();
+    if (!cleanUsername || cleanUsername.length < 3) {
+      newErrors.username = "Username must be at least 3 characters.";
+    } else if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+      newErrors.username = "Username can only contain letters, numbers, and underscores.";
     }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
-    if (!validate()) {
+  const handleSaveChanges = () => {
+    if (!validateForm()) {
       errorHaptic();
+      showAlert("Validation Notice", "Please correct the highlighted fields before saving.");
       return;
     }
-    success();
+
+    tap();
+    const cleanUsername = username.trim().toLowerCase();
+    const cleanDisplayName = displayName.trim();
+    const nameParts = cleanDisplayName.split(" ");
+    const firstName = nameParts[0] || "Julian";
+    const lastName = nameParts.slice(1).join(" ") || "Sterling";
+
     updateUserProfile({
-      display_name: displayName.trim(),
-      username: username.trim(),
+      display_name: cleanDisplayName,
+      first_name: firstName,
+      last_name: lastName,
+      username: cleanUsername,
       bio: bio.trim(),
       avatar_url: avatarUrl,
     });
-    showAlert("Profile Updated", "Your changes have been saved to your Vitality Passport.", [
-      {
-        text: "OK",
-        onPress: () => router.back(),
-      },
-    ]);
+
+    success();
+    showAlert("Passport Updated", "Your athlete profile changes have been registered.");
+    router.back();
   };
 
   const handleCancel = () => {
@@ -137,376 +150,302 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.obsidian }}>
-      {/* Top Bar */}
-      <View
-        style={{
-          paddingTop: Platform.OS === "ios" ? 54 : 44,
-          paddingHorizontal: Spacing.lg,
-          paddingBottom: 16,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottomWidth: 1,
-          borderBottomColor: Colors.border,
-          backgroundColor: Colors.void,
-        }}
-      >
-        <TouchableOpacity onPress={handleCancel} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Text style={{ color: Colors.secondary, fontSize: 15, fontWeight: "600" }}>Cancel</Text>
-        </TouchableOpacity>
-        <Text style={{ color: Colors.primary, fontSize: 16, fontWeight: "700", letterSpacing: 0.5 }}>
-          Edit Profile
-        </Text>
-        <TouchableOpacity onPress={handleSave} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Text style={{ color: Colors.glow, fontSize: 15, fontWeight: "700" }}>Save</Text>
-        </TouchableOpacity>
-      </View>
-
+    <View style={{ flex: 1, backgroundColor: Colors.chalk }}>
       <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingTop: 24, paddingBottom: 60 }}
+        contentContainerStyle={{
+          paddingBottom: 60,
+          paddingTop: Platform.OS === "ios" ? 56 : 40,
+          paddingHorizontal: Spacing.xl,
+        }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Avatar Section with Camera Icon Overlay */}
+        {/* Top Navigation Bar: Cancel & Save Changes */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 24,
+          }}
+        >
+          <TouchableOpacity
+            onPress={handleCancel}
+            style={{
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              borderRadius: 8,
+              backgroundColor: Colors.sand,
+              borderWidth: 1,
+              borderColor: Colors.sandDark,
+            }}
+          >
+            <Text style={{ color: Colors.espresso, fontSize: 13, fontWeight: "700" }}>
+              Cancel
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={{ color: Colors.espresso, fontSize: 17, fontWeight: "800" }}>
+            Edit Profile
+          </Text>
+
+          <TouchableOpacity
+            onPress={handleSaveChanges}
+            style={{
+              paddingVertical: 8,
+              paddingHorizontal: 14,
+              borderRadius: 8,
+              backgroundColor: Colors.olive,
+            }}
+          >
+            <Text style={{ color: Colors.chalk, fontSize: 13, fontWeight: "800" }}>
+              Save Changes
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ─── Avatar Upload & Native Photo Picker ─── */}
         <MotiView
           from={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: "timing", duration: 400 }}
-          style={{ alignItems: "center", marginBottom: 28 }}
+          transition={{ type: "timing", duration: 350 }}
+          style={{
+            alignItems: "center",
+            marginBottom: 26,
+            backgroundColor: Colors.sand,
+            borderRadius: 20,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: Colors.sandDark,
+          }}
         >
-          {/* Avatar Container with Tap Handler */}
           <TouchableOpacity
-            onPress={pickImageFromLibrary}
+            onPress={handlePickPhoto}
             activeOpacity={0.85}
             style={{ position: "relative", marginBottom: 12 }}
           >
-            <View
+            {/* Main Avatar Preview */}
+            <Image
+              source={{ uri: avatarUrl }}
               style={{
                 width: 96,
                 height: 96,
                 borderRadius: 48,
-                backgroundColor: Colors.elevated,
-                borderWidth: 2.5,
-                borderColor: Colors.glow,
-                overflow: "hidden",
-                alignItems: "center",
-                justifyContent: "center",
+                borderWidth: 3,
+                borderColor: Colors.olive,
+                backgroundColor: Colors.sandDark,
               }}
-            >
-              {isLoadingImage ? (
-                <ActivityIndicator color={Colors.glow} size="small" />
-              ) : avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={{ width: "100%", height: "100%" }} />
-              ) : (
-                <Text style={{ color: Colors.glow, fontSize: 36, fontWeight: "800" }}>
-                  {(displayName || username || "E")[0].toUpperCase()}
-                </Text>
-              )}
-            </View>
+            />
 
-            {/* Camera / Edit Badge Overlay */}
+            {/* Camera / Edit Icon Overlay Badge */}
             <View
               style={{
                 position: "absolute",
                 bottom: 0,
                 right: 0,
-                backgroundColor: Colors.glow,
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                borderWidth: 2.5,
-                borderColor: Colors.void,
+                backgroundColor: Colors.charcoal,
+                borderWidth: 2,
+                borderColor: Colors.chalk,
                 alignItems: "center",
                 justifyContent: "center",
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.35,
-                shadowRadius: 3,
-                elevation: 4,
               }}
             >
-              <Text style={{ fontSize: 14 }}>📷</Text>
+              {isLoadingPhoto ? (
+                <ActivityIndicator color={Colors.chalk} size="small" />
+              ) : (
+                <Text style={{ fontSize: 14 }}>📷</Text>
+              )}
             </View>
           </TouchableOpacity>
 
-          {/* Primary Action: Choose from Library */}
-          <TouchableOpacity
-            onPress={pickImageFromLibrary}
-            activeOpacity={0.7}
-            style={{
-              paddingVertical: 6,
-              paddingHorizontal: 12,
-              marginBottom: 6,
-            }}
-          >
-            <Text
-              style={{
-                color: Colors.glow,
-                fontSize: 13,
-                fontWeight: "700",
-                letterSpacing: 0.5,
-              }}
-            >
-              {isLoadingImage ? "Opening Gallery..." : "Choose from Library"}
+          <TouchableOpacity onPress={handlePickPhoto} style={{ marginBottom: 6 }}>
+            <Text style={{ color: Colors.olive, fontSize: 13, fontWeight: "800" }}>
+              Choose from Photo Gallery ↗
             </Text>
           </TouchableOpacity>
 
-          {/* Revert / Remove custom avatar if one is set */}
-          {avatarUrl ? (
-            <TouchableOpacity
-              onPress={handleRemoveAvatar}
-              activeOpacity={0.7}
-              style={{
-                paddingVertical: 4,
-                paddingHorizontal: 8,
-                marginBottom: 16,
-              }}
-            >
-              <Text style={{ color: Colors.danger, fontSize: 11, fontWeight: "600" }}>
-                Remove Photo · Use Default Avatar
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={{ marginBottom: 12 }} />
-          )}
-
-          {/* Preset Avatar Selection Row */}
-          <Text
-            style={{
-              color: Colors.tertiary,
-              fontSize: 10,
-              fontWeight: "700",
-              letterSpacing: 1.5,
-              marginBottom: 10,
-            }}
-          >
-            OR CHOOSE AN ATHLETE PRESET
+          <Text style={{ color: Colors.espressoMuted, fontSize: 11, textAlign: "center", marginBottom: 14 }}>
+            Square aspect ratio (1:1) · JPEG, PNG, or HEIC
           </Text>
 
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <TouchableOpacity
-              onPress={() => {
-                tap();
-                setAvatarUrl("");
-              }}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                borderWidth: 2,
-                borderColor: avatarUrl === "" ? Colors.glow : Colors.border,
-                backgroundColor: Colors.surface,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Text style={{ color: Colors.tertiary, fontSize: 11, fontWeight: "700" }}>Default</Text>
-            </TouchableOpacity>
-
+          {/* Preset Choices & Revert Button */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             {AVATAR_PRESETS.map((preset, idx) => (
               <TouchableOpacity
                 key={idx}
                 onPress={() => {
-                  tap();
+                  selection();
                   setAvatarUrl(preset);
                 }}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  borderWidth: 2,
-                  borderColor: avatarUrl === preset ? Colors.glow : Colors.border,
-                  overflow: "hidden",
-                }}
               >
-                <Image source={{ uri: preset }} style={{ width: "100%", height: "100%" }} />
+                <Image
+                  source={{ uri: preset }}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    borderWidth: avatarUrl === preset ? 2 : 1,
+                    borderColor: avatarUrl === preset ? Colors.olive : Colors.sandDark,
+                  }}
+                />
               </TouchableOpacity>
             ))}
+
+            {avatarUrl !== DEFAULT_AVATAR && (
+              <TouchableOpacity
+                onPress={handleRevertDefault}
+                style={{
+                  backgroundColor: Colors.softChalk,
+                  borderRadius: 8,
+                  paddingHorizontal: 8,
+                  paddingVertical: 6,
+                  borderWidth: 1,
+                  borderColor: Colors.sandDark,
+                }}
+              >
+                <Text style={{ color: Colors.terracotta, fontSize: 10, fontWeight: "700" }}>
+                  Reset Default
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </MotiView>
 
-        {/* Inputs */}
-        <MotiView
-          from={{ opacity: 0, translateY: 10 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 450, delay: 100 }}
-          style={{ gap: 20 }}
-        >
+        {/* ─── Form Inputs: Display Name, Username, Bio ─── */}
+        <View style={{ gap: 16, marginBottom: 28 }}>
           {/* Display Name */}
           <View>
-            <Text
-              style={{
-                color: Colors.tertiary,
-                fontSize: 11,
-                fontWeight: "700",
-                letterSpacing: 1.5,
-                marginBottom: 8,
-              }}
-            >
-              DISPLAY NAME
-            </Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+              <Text style={{ color: Colors.espresso, fontSize: 11.5, fontWeight: "800", letterSpacing: 1 }}>
+                DISPLAY NAME
+              </Text>
+              {errors.displayName && (
+                <Text style={{ color: Colors.terracotta, fontSize: 11, fontWeight: "700" }}>
+                  {errors.displayName}
+                </Text>
+              )}
+            </View>
             <TextInput
               value={displayName}
               onChangeText={(text) => {
                 setDisplayName(text);
-                if (errors.displayName) setErrors((e) => ({ ...e, displayName: undefined }));
+                if (errors.displayName) setErrors((prev) => ({ ...prev, displayName: undefined }));
               }}
-              placeholder="e.g. Alex Vance"
-              placeholderTextColor={Colors.tertiary}
+              placeholder="e.g. Julian Sterling"
+              placeholderTextColor={Colors.espressoFaint}
               style={{
-                backgroundColor: Colors.surface,
-                borderWidth: 1,
-                borderColor: errors.displayName ? Colors.danger : Colors.border,
+                backgroundColor: Colors.sand,
                 borderRadius: 12,
                 paddingHorizontal: 16,
                 paddingVertical: 14,
-                color: Colors.primary,
-                fontSize: 15,
+                color: Colors.espresso,
+                fontSize: 14.5,
+                fontWeight: "600",
+                borderWidth: 1,
+                borderColor: errors.displayName ? Colors.terracotta : Colors.sandDark,
               }}
             />
-            {errors.displayName && (
-              <Text style={{ color: Colors.danger, fontSize: 12, marginTop: 4 }}>
-                {errors.displayName}
-              </Text>
-            )}
           </View>
 
           {/* Username */}
           <View>
-            <Text
-              style={{
-                color: Colors.tertiary,
-                fontSize: 11,
-                fontWeight: "700",
-                letterSpacing: 1.5,
-                marginBottom: 8,
-              }}
-            >
-              ATHLETE USERNAME
-            </Text>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                backgroundColor: Colors.surface,
-                borderWidth: 1,
-                borderColor: errors.username ? Colors.danger : Colors.border,
-                borderRadius: 12,
-                paddingHorizontal: 16,
-              }}
-            >
-              <Text style={{ color: Colors.tertiary, fontSize: 15, marginRight: 2 }}>@</Text>
-              <TextInput
-                value={username}
-                onChangeText={(text) => {
-                  setUsername(text);
-                  if (errors.username) setErrors((e) => ({ ...e, username: undefined }));
-                }}
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholder="username"
-                placeholderTextColor={Colors.tertiary}
-                style={{
-                  flex: 1,
-                  paddingVertical: 14,
-                  color: Colors.primary,
-                  fontSize: 15,
-                }}
-              />
-            </View>
-            {errors.username && (
-              <Text style={{ color: Colors.danger, fontSize: 12, marginTop: 4 }}>
-                {errors.username}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+              <Text style={{ color: Colors.espresso, fontSize: 11.5, fontWeight: "800", letterSpacing: 1 }}>
+                PASSPORT USERNAME
               </Text>
-            )}
-          </View>
-
-          {/* Bio */}
-          <View>
-            <Text
-              style={{
-                color: Colors.tertiary,
-                fontSize: 11,
-                fontWeight: "700",
-                letterSpacing: 1.5,
-                marginBottom: 8,
-              }}
-            >
-              SOMATIC VITALITY BIO
-            </Text>
+              {errors.username && (
+                <Text style={{ color: Colors.terracotta, fontSize: 11, fontWeight: "700" }}>
+                  {errors.username}
+                </Text>
+              )}
+            </View>
             <TextInput
-              value={bio}
-              onChangeText={setBio}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              placeholder="Tell other athletes about your athletic focus and momentum..."
-              placeholderTextColor={Colors.tertiary}
+              value={username}
+              onChangeText={(text) => {
+                setUsername(text);
+                if (errors.username) setErrors((prev) => ({ ...prev, username: undefined }));
+              }}
+              placeholder="e.g. julian_sterling"
+              placeholderTextColor={Colors.espressoFaint}
+              autoCapitalize="none"
               style={{
-                backgroundColor: Colors.surface,
-                borderWidth: 1,
-                borderColor: Colors.border,
+                backgroundColor: Colors.sand,
                 borderRadius: 12,
                 paddingHorizontal: 16,
                 paddingVertical: 14,
-                color: Colors.primary,
-                fontSize: 14,
-                lineHeight: 20,
-                minHeight: 100,
+                color: Colors.espresso,
+                fontSize: 14.5,
+                fontWeight: "600",
+                borderWidth: 1,
+                borderColor: errors.username ? Colors.terracotta : Colors.sandDark,
               }}
             />
           </View>
 
-          {/* Action Buttons */}
-          <View style={{ marginTop: 12, gap: 12 }}>
-            <TouchableOpacity
-              onPress={handleSave}
-              activeOpacity={0.8}
+          {/* Bio */}
+          <View>
+            <Text style={{ color: Colors.espresso, fontSize: 11.5, fontWeight: "800", letterSpacing: 1, marginBottom: 6 }}>
+              ATHLETE BIO & CADENCE FOCUS
+            </Text>
+            <TextInput
+              value={bio}
+              onChangeText={setBio}
+              placeholder="Describe your athletic disciplines, cadence goals, or somatic focus."
+              placeholderTextColor={Colors.espressoFaint}
+              multiline
+              numberOfLines={3}
               style={{
-                backgroundColor: Colors.glow,
-                borderRadius: 14,
-                paddingVertical: 16,
-                alignItems: "center",
-              }}
-            >
-              <Text
-                style={{
-                  color: Colors.void,
-                  fontSize: 14,
-                  fontWeight: "800",
-                  letterSpacing: 1.5,
-                }}
-              >
-                SAVE CHANGES
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleCancel}
-              activeOpacity={0.8}
-              style={{
-                borderWidth: 1,
-                borderColor: Colors.border,
-                borderRadius: 14,
+                backgroundColor: Colors.sand,
+                borderRadius: 12,
+                paddingHorizontal: 16,
                 paddingVertical: 14,
-                alignItems: "center",
-                backgroundColor: Colors.surface,
+                color: Colors.espresso,
+                fontSize: 14,
+                lineHeight: 20,
+                borderWidth: 1,
+                borderColor: Colors.sandDark,
+                minHeight: 88,
               }}
-            >
-              <Text
-                style={{
-                  color: Colors.secondary,
-                  fontSize: 14,
-                  fontWeight: "700",
-                  letterSpacing: 1,
-                }}
-              >
-                CANCEL
-              </Text>
-            </TouchableOpacity>
+            />
           </View>
-        </MotiView>
+        </View>
+
+        {/* Action Button: Save Changes */}
+        <TouchableOpacity
+          onPress={handleSaveChanges}
+          activeOpacity={0.88}
+          style={{
+            backgroundColor: Colors.olive,
+            borderRadius: 14,
+            paddingVertical: 16,
+            alignItems: "center",
+            marginBottom: 12,
+          }}
+        >
+          <Text style={{ color: Colors.chalk, fontSize: 14.5, fontWeight: "800", letterSpacing: 0.5 }}>
+            Save Changes →
+          </Text>
+        </TouchableOpacity>
+
+        {/* Cancel Button */}
+        <TouchableOpacity
+          onPress={handleCancel}
+          activeOpacity={0.85}
+          style={{
+            backgroundColor: Colors.sand,
+            borderWidth: 1,
+            borderColor: Colors.sandDark,
+            borderRadius: 14,
+            paddingVertical: 14,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: Colors.espressoMuted, fontSize: 13, fontWeight: "700" }}>
+            Discard & Return
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );

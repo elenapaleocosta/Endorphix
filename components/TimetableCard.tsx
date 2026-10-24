@@ -23,10 +23,10 @@ export function TimetableCard({ timetable }: TimetableCardProps) {
   return (
     <View
       style={{
-        backgroundColor: Colors.surface,
-        borderRadius: 14,
+        backgroundColor: Colors.sand,
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: Colors.sandDark,
         overflow: "hidden",
       }}
     >
@@ -43,30 +43,55 @@ export function TimetableCard({ timetable }: TimetableCardProps) {
               alignItems: "center",
               paddingHorizontal: 16,
               paddingVertical: 12,
-              backgroundColor: isToday ? Colors.elevated : "transparent",
+              backgroundColor: isToday ? Colors.softChalk : "transparent",
               borderBottomWidth: index < DAYS.length - 1 ? 1 : 0,
-              borderBottomColor: Colors.border,
+              borderBottomColor: Colors.sandDark,
             }}
           >
-            <Text
-              style={{
-                color: isToday ? Colors.glow : Colors.secondary,
-                fontSize: 13,
-                fontWeight: isToday ? "700" : "400",
-                width: 36,
-              }}
-            >
-              {label}
-            </Text>
-            <Text
-              style={{
-                color: slot ? Colors.primary : Colors.tertiary,
-                fontSize: 13,
-                fontWeight: isToday ? "600" : "400",
-              }}
-            >
-              {slot ? `${slot.open} – ${slot.close}` : "Closed"}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              {isToday && (
+                <View
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: Colors.olive,
+                  }}
+                />
+              )}
+              <Text
+                style={{
+                  color: isToday ? Colors.olive : Colors.espressoMuted,
+                  fontSize: 13,
+                  fontWeight: isToday ? "800" : "500",
+                  width: 38,
+                }}
+              >
+                {label}
+              </Text>
+            </View>
+
+            {slot ? (
+              <Text
+                style={{
+                  color: isToday ? Colors.espresso : Colors.espressoMuted,
+                  fontSize: 13,
+                  fontWeight: isToday ? "700" : "400",
+                }}
+              >
+                {slot.open} – {slot.close}
+              </Text>
+            ) : (
+              <Text
+                style={{
+                  color: Colors.espressoFaint,
+                  fontSize: 13,
+                  fontStyle: "italic",
+                }}
+              >
+                Rest / Closed
+              </Text>
+            )}
           </View>
         );
       })}
