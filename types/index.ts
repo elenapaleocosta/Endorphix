@@ -51,6 +51,7 @@ export type SportCategory =
   | "martial_arts"
   | "football"
   | "basketball"
+  | "volleyball"
   | "gym"
   | "hiking"
   | "pilates"
@@ -58,6 +59,8 @@ export type SportCategory =
   | "surfing"
   | "padel"
   | "trail_running"
+  | "boxing"
+  | "sailing"
   | "other";
 
 export interface MacroRealmDefinition {
@@ -74,14 +77,14 @@ export const MACRO_REALMS: MacroRealmDefinition[] = [
     label: "Water",
     tagline: "Hydrodynamic conditioning & open-water vitality",
     accent: "#A7744B",
-    sports: ["swimming", "rowing", "surfing"],
+    sports: ["swimming", "rowing", "surfing", "sailing"],
   },
   {
     id: "land",
     label: "Land",
     tagline: "High-cadence running, tennis clubs & kinetic mastery",
     accent: "#5A6738",
-    sports: ["tennis", "running", "cycling", "gym", "crossfit", "padel", "yoga"],
+    sports: ["tennis", "running", "cycling", "gym", "crossfit", "padel", "yoga", "football", "basketball", "volleyball", "pilates", "boxing", "martial_arts"],
   },
   {
     id: "mountain",
@@ -162,6 +165,7 @@ export interface Booking {
   facility_name: string;
   activity_name: string;
   activity_type: ActivityType;
+  sport_category?: SportCategory;
   court_or_slot: string;
   date: string;
   start_time: string;

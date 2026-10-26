@@ -17,19 +17,32 @@ import { useNearbyFacilities } from "@/hooks/useFacilities";
 import { useHaptics } from "@/hooks/useHaptics";
 import { FacilityCard } from "@/components/FacilityCard";
 import { SearchModeToggle } from "@/components/SearchModeToggle";
+import { SportAthleticStats } from "@/components/SportAthleticStats";
 import { Colors, Spacing, MAX_RADIUS_KM } from "@/constants";
 import { MACRO_REALMS, type SportCategory, type MacroRealm, type TourPlan } from "@/types";
 import { generateDestinationActionPackages } from "@/lib/geo-services";
 
-const SUB_SPORTS: { label: string; value: SportCategory; realm: MacroRealm }[] = [
-  { label: "Tennis & Rackets", value: "tennis", realm: "land" },
-  { label: "Running & Track", value: "running", realm: "land" },
-  { label: "Cycling & Velo", value: "cycling", realm: "land" },
-  { label: "Olympic Swimming", value: "swimming", realm: "water" },
-  { label: "Rowing & Scull", value: "rowing", realm: "water" },
-  { label: "Climbing & Crag", value: "climbing", realm: "mountain" },
-  { label: "Trail Running", value: "trail_running", realm: "mountain" },
-  { label: "Athletic Gym", value: "gym", realm: "land" },
+const ALL_SPORTS: { label: string; value: SportCategory; icon: string; realm: MacroRealm }[] = [
+  { label: "Soccer / Football", value: "football", icon: "⚽", realm: "land" },
+  { label: "Basketball", value: "basketball", icon: "🏀", realm: "land" },
+  { label: "Volleyball", value: "volleyball", icon: "🏐", realm: "land" },
+  { label: "Tennis", value: "tennis", icon: "🎾", realm: "land" },
+  { label: "Swimming", value: "swimming", icon: "🏊", realm: "water" },
+  { label: "Hiking", value: "hiking", icon: "🥾", realm: "mountain" },
+  { label: "Running", value: "running", icon: "🏃", realm: "land" },
+  { label: "Cycling", value: "cycling", icon: "🚴", realm: "land" },
+  { label: "Climbing", value: "climbing", icon: "🧗", realm: "mountain" },
+  { label: "Padel", value: "padel", icon: "🏓", realm: "land" },
+  { label: "Athletic Gym", value: "gym", icon: "🏋️", realm: "land" },
+  { label: "Boxing & Combat", value: "boxing", icon: "🥊", realm: "land" },
+  { label: "Surfing", value: "surfing", icon: "🏄", realm: "water" },
+  { label: "Rowing", value: "rowing", icon: "🚣", realm: "water" },
+  { label: "Sailing", value: "sailing", icon: "⛵", realm: "water" },
+  { label: "Trail Running", value: "trail_running", icon: "🌲", realm: "mountain" },
+  { label: "Pilates", value: "pilates", icon: "🤸", realm: "land" },
+  { label: "Yoga", value: "yoga", icon: "🧘", realm: "land" },
+  { label: "CrossFit", value: "crossfit", icon: "⚡", realm: "land" },
+  { label: "Martial Arts", value: "martial_arts", icon: "🥋", realm: "land" },
 ];
 
 export default function DiscoverScreen() {
@@ -253,14 +266,42 @@ export default function DiscoverScreen() {
               </View>
             </View>
 
-            {/* Sub-Sport Disciplines */}
+            {/* All Sports Categories Horizontal Row */}
             <View style={{ marginBottom: 16 }}>
+              <View
+                style={{
+                  paddingHorizontal: Spacing.xl,
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <Text
+                  style={{
+                    color: Colors.espressoMuted,
+                    fontSize: 11,
+                    fontWeight: "800",
+                    letterSpacing: 1.5,
+                  }}
+                >
+                  ALL SPORT CATEGORIES
+                </Text>
+                {selectedSport && (
+                  <TouchableOpacity onPress={() => setSelectedSport(null)}>
+                    <Text style={{ color: Colors.olive, fontSize: 11, fontWeight: "700" }}>
+                      Clear Filter ✕
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ paddingHorizontal: Spacing.xl, gap: 8 }}
               >
-                {SUB_SPORTS.filter(
+                {ALL_SPORTS.filter(
                   (s) => !selectedRealm || s.realm === selectedRealm
                 ).map((item) => {
                   const isSelected = selectedSport === item.value;
@@ -271,17 +312,21 @@ export default function DiscoverScreen() {
                       activeOpacity={0.85}
                       style={{
                         backgroundColor: isSelected ? Colors.olive : Colors.softChalk,
-                        paddingHorizontal: 14,
-                        paddingVertical: 8,
-                        borderRadius: 10,
+                        paddingHorizontal: 13,
+                        paddingVertical: 9,
+                        borderRadius: 12,
                         borderWidth: 1,
                         borderColor: isSelected ? Colors.olive : Colors.sandDark,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
                       }}
                     >
+                      <Text style={{ fontSize: 14 }}>{item.icon}</Text>
                       <Text
                         style={{
                           color: isSelected ? Colors.chalk : Colors.espresso,
-                          fontSize: 12,
+                          fontSize: 12.5,
                           fontWeight: isSelected ? "800" : "600",
                         }}
                       >
@@ -350,6 +395,22 @@ export default function DiscoverScreen() {
 
             {/* Facilities List */}
             <View style={{ paddingHorizontal: Spacing.xl }}>
+              {/* Dynamic Athletic Valuation & Order Metrics */}
+              {bookings.length > 0 && (
+                <SportAthleticStats
+                  bookings={bookings}
+                  selectedSport={selectedSport}
+                  onSelectSport={(sport) => {
+                    tap();
+                    if (selectedSport === sport) {
+                      setSelectedSport(null);
+                    } else {
+                      setSelectedSport(sport);
+                    }
+                  }}
+                />
+              )}
+
               <View
                 style={{
                   flexDirection: "row",
