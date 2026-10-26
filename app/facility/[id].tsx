@@ -8,6 +8,7 @@ import {
   Linking,
   Platform,
   Dimensions,
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MotiView } from "moti";
@@ -39,6 +40,8 @@ export default function FacilityDetailScreen() {
   const [selectedSlot, setSelectedSlot] = useState(SAMPLE_SLOTS[0]);
   const [bookedSuccess, setBookedSuccess] = useState(false);
   const [lastBookingId, setLastBookingId] = useState<string | null>(null);
+  const [showWebModal, setShowWebModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   const handleGoBack = () => {
     tap();
@@ -88,9 +91,24 @@ export default function FacilityDetailScreen() {
 
   const handleWebsite = () => {
     confirm();
-    if (facility?.website) {
-      Linking.openURL(facility.website);
-    }
+    setShowWebModal(true);
+  };
+
+  const openGoogleMaps = () => {
+    confirm();
+    setShowWebModal(false);
+    if (!facility) return;
+    const { latitude, longitude } = facility.location;
+    const label = encodeURIComponent(facility.name);
+    // Standard Google Maps web/app URL that works seamlessly across all platforms & devices
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}&query_place_id=${facility.google_place_id || ""}`;
+    Linking.openURL(googleMapsUrl);
+  };
+
+  const openActivityInfo = () => {
+    confirm();
+    setShowWebModal(false);
+    setShowInfoModal(true);
   };
 
   const handleDirections = () => {
@@ -592,6 +610,515 @@ export default function FacilityDetailScreen() {
           <TimetableCard timetable={facility.timetable} />
         </View>
       </ScrollView>
+
+      {/* ─── Modal 1: Choice Dialog when clicking "Web" ─── */}
+      <Modal
+        visible={showWebModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowWebModal(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowWebModal(false)}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(43, 31, 23, 0.65)",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            padding: 16,
+          }}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={{
+              width: "100%",
+              maxWidth: 480,
+              backgroundColor: Colors.sand,
+              borderRadius: 24,
+              padding: 22,
+              borderWidth: 1.5,
+              borderColor: Colors.sandDark,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.25,
+              shadowRadius: 16,
+              elevation: 10,
+            }}
+          >
+            {/* Modal Title */}
+            <View style={{ alignItems: "center", marginBottom: 18 }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: Colors.sandDark,
+                  marginBottom: 14,
+                }}
+              />
+              <Text
+                style={{
+                  color: Colors.espresso,
+                  fontSize: 18,
+                  fontWeight: "800",
+                  textAlign: "center",
+                  letterSpacing: -0.3,
+                }}
+              >
+                Activity & Destination Options
+              </Text>
+              <Text
+                style={{
+                  color: Colors.espressoMuted,
+                  fontSize: 13,
+                  textAlign: "center",
+                  marginTop: 4,
+                }}
+              >
+                Choose how you'd like to explore this activity
+              </Text>
+            </View>
+
+            {/* Choice 1: Google Map for Destination */}
+            <TouchableOpacity
+              onPress={openGoogleMaps}
+              activeOpacity={0.85}
+              style={{
+                backgroundColor: Colors.softChalk,
+                borderRadius: 16,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: Colors.sandDark,
+                marginBottom: 12,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <View
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 12,
+                  backgroundColor: Colors.olive + "18",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: Colors.olive + "33",
+                }}
+              >
+                <Text style={{ fontSize: 22 }}>📍</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: Colors.espresso, fontSize: 15, fontWeight: "800", marginBottom: 2 }}>
+                  Google Maps Destination
+                </Text>
+                <Text style={{ color: Colors.espressoMuted, fontSize: 12, lineHeight: 16 }}>
+                  Open destination location, directions & satellite terrain in Google Maps
+                </Text>
+              </View>
+              <Text style={{ color: Colors.olive, fontSize: 18, fontWeight: "700" }}>↗</Text>
+            </TouchableOpacity>
+
+            {/* Choice 2: Activity Information */}
+            <TouchableOpacity
+              onPress={openActivityInfo}
+              activeOpacity={0.85}
+              style={{
+                backgroundColor: Colors.softChalk,
+                borderRadius: 16,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: Colors.sandDark,
+                marginBottom: 14,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <View
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 12,
+                  backgroundColor: Colors.camel + "18",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: Colors.camel + "33",
+                }}
+              >
+                <Text style={{ fontSize: 22 }}>ℹ️</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: Colors.espresso, fontSize: 15, fontWeight: "800", marginBottom: 2 }}>
+                  Activity Information
+                </Text>
+                <Text style={{ color: Colors.espressoMuted, fontSize: 12, lineHeight: 16 }}>
+                  Detailed athletic breakdown, amenities, timings & training protocols
+                </Text>
+              </View>
+              <Text style={{ color: Colors.camel, fontSize: 18, fontWeight: "700" }}>→</Text>
+            </TouchableOpacity>
+
+            {/* Cancel Button */}
+            <TouchableOpacity
+              onPress={() => setShowWebModal(false)}
+              activeOpacity={0.8}
+              style={{
+                backgroundColor: Colors.sand,
+                borderRadius: 14,
+                paddingVertical: 13,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: Colors.sandDark,
+              }}
+            >
+              <Text style={{ color: Colors.espressoMuted, fontSize: 13.5, fontWeight: "700" }}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── Modal 2: Activity Information Details ─── */}
+      <Modal
+        visible={showInfoModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowInfoModal(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(43, 31, 23, 0.7)",
+            justifyContent: "flex-end",
+            alignItems: "center",
+          }}
+        >
+          <View
+            style={{
+              width: "100%",
+              maxWidth: 560,
+              maxHeight: "85%",
+              backgroundColor: Colors.chalk,
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              paddingTop: 16,
+              paddingHorizontal: Spacing.xl,
+              paddingBottom: Platform.OS === "ios" ? 40 : 24,
+              borderWidth: 1.5,
+              borderColor: Colors.sandDark,
+            }}
+          >
+            {/* Header Handle & Close */}
+            <View style={{ alignItems: "center", marginBottom: 14 }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: Colors.sandDark,
+                  marginBottom: 12,
+                }}
+              />
+              <View
+                style={{
+                  width: "100%",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: Colors.espresso,
+                    fontSize: 20,
+                    fontWeight: "800",
+                    letterSpacing: -0.4,
+                  }}
+                >
+                  Activity Details
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowInfoModal(false)}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: Colors.sand,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text style={{ color: Colors.espresso, fontSize: 14, fontWeight: "800" }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Activity & Venue Header */}
+              <View
+                style={{
+                  backgroundColor: Colors.sand,
+                  borderRadius: 16,
+                  padding: 16,
+                  borderWidth: 1,
+                  borderColor: Colors.sandDark,
+                  marginBottom: 16,
+                }}
+              >
+                <Text
+                  style={{
+                    color: Colors.olive,
+                    fontSize: 10,
+                    fontWeight: "800",
+                    letterSpacing: 1.5,
+                    marginBottom: 4,
+                  }}
+                >
+                  SELECTED ACTIVITY & VENUE
+                </Text>
+                <Text style={{ color: Colors.espresso, fontSize: 18, fontWeight: "800", marginBottom: 4 }}>
+                  {facility.name}
+                </Text>
+                <Text style={{ color: Colors.espressoMuted, fontSize: 13 }}>
+                  {facility.address}
+                </Text>
+              </View>
+
+              {/* Key Activity Metrics Grid */}
+              <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
+                <View
+                  style={{
+                    flex: 1,
+                    backgroundColor: Colors.softChalk,
+                    borderRadius: 14,
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: Colors.sandDark,
+                  }}
+                >
+                  <Text style={{ color: Colors.espressoMuted, fontSize: 10, fontWeight: "700" }}>
+                    SPORT REALM
+                  </Text>
+                  <Text style={{ color: Colors.camel, fontSize: 14, fontWeight: "800", marginTop: 2 }}>
+                    {facility.macro_realm?.toUpperCase() || "LAND"}
+                  </Text>
+                </View>
+
+                <View
+                  style={{
+                    flex: 1,
+                    backgroundColor: Colors.softChalk,
+                    borderRadius: 14,
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: Colors.sandDark,
+                  }}
+                >
+                  <Text style={{ color: Colors.espressoMuted, fontSize: 10, fontWeight: "700" }}>
+                    DISTANCE
+                  </Text>
+                  <Text style={{ color: Colors.olive, fontSize: 14, fontWeight: "800", marginTop: 2 }}>
+                    {distanceKm} km away
+                  </Text>
+                </View>
+
+                <View
+                  style={{
+                    flex: 1,
+                    backgroundColor: Colors.softChalk,
+                    borderRadius: 14,
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: Colors.sandDark,
+                  }}
+                >
+                  <Text style={{ color: Colors.espressoMuted, fontSize: 10, fontWeight: "700" }}>
+                    RATING
+                  </Text>
+                  <Text style={{ color: Colors.terracotta, fontSize: 14, fontWeight: "800", marginTop: 2 }}>
+                    ★ {facility.rating?.toFixed(1) || "4.9"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Sports Offered */}
+              <View style={{ marginBottom: 16 }}>
+                <Text
+                  style={{
+                    color: Colors.espressoMuted,
+                    fontSize: 11,
+                    fontWeight: "800",
+                    letterSpacing: 1.5,
+                    marginBottom: 8,
+                  }}
+                >
+                  SUPPORTED DISCIPLINES & SPORTS
+                </Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                  {facility.primary_sports.map((sport) => (
+                    <View
+                      key={sport}
+                      style={{
+                        backgroundColor: Colors.olive + "16",
+                        borderWidth: 1,
+                        borderColor: Colors.olive + "44",
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ color: Colors.olive, fontSize: 12, fontWeight: "800" }}>
+                        ✓ {sport.toUpperCase()}
+                      </Text>
+                    </View>
+                  ))}
+                  {facility.secondary_sports?.map((sport) => (
+                    <View
+                      key={sport}
+                      style={{
+                        backgroundColor: Colors.softChalk,
+                        borderWidth: 1,
+                        borderColor: Colors.sandDark,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ color: Colors.espressoMuted, fontSize: 12, fontWeight: "700" }}>
+                        {sport.toUpperCase()}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* Description & Overview */}
+              <View style={{ marginBottom: 16 }}>
+                <Text
+                  style={{
+                    color: Colors.espressoMuted,
+                    fontSize: 11,
+                    fontWeight: "800",
+                    letterSpacing: 1.5,
+                    marginBottom: 8,
+                  }}
+                >
+                  ACTIVITY OVERVIEW
+                </Text>
+                <Text
+                  style={{
+                    color: Colors.espresso,
+                    fontSize: 13.5,
+                    lineHeight: 20,
+                    fontWeight: "500",
+                    backgroundColor: Colors.sand,
+                    borderRadius: 14,
+                    padding: 14,
+                    borderWidth: 1,
+                    borderColor: Colors.sandDark,
+                  }}
+                >
+                  {facility.description ||
+                    "Premier championship athletic grounds built for sustained aerobic conditioning and somatic recovery."}
+                </Text>
+              </View>
+
+              {/* Expand Energy Protocols */}
+              {facility.expand_activities && facility.expand_activities.length > 0 && (
+                <View style={{ marginBottom: 18 }}>
+                  <Text
+                    style={{
+                      color: Colors.espressoMuted,
+                      fontSize: 11,
+                      fontWeight: "800",
+                      letterSpacing: 1.5,
+                      marginBottom: 8,
+                    }}
+                  >
+                    ON-SITE TRAINING & RECOVERY PROTOCOLS
+                  </Text>
+                  <View style={{ gap: 8 }}>
+                    {facility.expand_activities.map((act) => (
+                      <View
+                        key={act.id}
+                        style={{
+                          backgroundColor: Colors.softChalk,
+                          borderRadius: 12,
+                          padding: 12,
+                          borderLeftWidth: 3,
+                          borderLeftColor: act.category === "recovery" ? Colors.camel : Colors.olive,
+                          borderWidth: 1,
+                          borderColor: Colors.sandDark,
+                        }}
+                      >
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 2 }}>
+                          <Text style={{ color: Colors.espresso, fontSize: 13, fontWeight: "700" }}>
+                            {act.title}
+                          </Text>
+                          <Text style={{ color: Colors.espressoMuted, fontSize: 11, fontWeight: "600" }}>
+                            {act.durationMinutes} min
+                          </Text>
+                        </View>
+                        <Text style={{ color: Colors.espressoMuted, fontSize: 12, lineHeight: 16 }}>
+                          {act.description}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Action Buttons inside Info Modal */}
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 20 }}>
+                <TouchableOpacity
+                  onPress={openGoogleMaps}
+                  style={{
+                    flex: 1,
+                    backgroundColor: Colors.olive,
+                    borderRadius: 14,
+                    paddingVertical: 14,
+                    alignItems: "center",
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Text style={{ color: Colors.chalk, fontSize: 13, fontWeight: "800" }}>
+                    📍 Open Google Map
+                  </Text>
+                </TouchableOpacity>
+
+                {facility.website && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowInfoModal(false);
+                      Linking.openURL(facility.website!);
+                    }}
+                    style={{
+                      backgroundColor: Colors.softChalk,
+                      borderRadius: 14,
+                      paddingVertical: 14,
+                      paddingHorizontal: 18,
+                      borderWidth: 1,
+                      borderColor: Colors.sandDark,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ color: Colors.espresso, fontSize: 13, fontWeight: "700" }}>
+                      Visit Website 🌐
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
