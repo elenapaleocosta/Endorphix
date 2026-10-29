@@ -1,49 +1,29 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const FTUE_KEY = "@endorphix/ftue_completed";
 
 interface OnboardingState {
   hasCompletedFTUE: boolean;
-  currentSlide: number;
-  isLoading: boolean;
-  checkFTUE: () => Promise<void>;
-  completeFTUE: () => Promise<void>;
-  resetFTUE: () => Promise<void>;
-  setSlide: (index: number) => void;
+  hydrated: boolean;
+  markHydrated: () => void;
+  completeFTUE: () => void;
+  resetFTUE: () => void;
 }
 
-export const useOnboardingStore = create<OnboardingState>((set) => ({
-  hasCompletedFTUE: false,
-  currentSlide: 0,
-  isLoading: true,
-
-  checkFTUE: async () => {
-    try {
-      const value = await AsyncStorage.getItem(FTUE_KEY);
-      set({ hasCompletedFTUE: value === "true", isLoading: false });
-    } catch {
-      set({ hasCompletedFTUE: false, isLoading: false });
-    }
-  },
-
-  completeFTUE: async () => {
-    try {
-      await AsyncStorage.setItem(FTUE_KEY, "true");
-      set({ hasCompletedFTUE: true });
-    } catch (e) {
-      console.error("[Onboarding] Failed to persist FTUE state:", e);
-    }
-  },
-
-  resetFTUE: async () => {
-    try {
-      await AsyncStorage.removeItem(FTUE_KEY);
-      set({ hasCompletedFTUE: false, currentSlide: 0 });
-    } catch (e) {
-      console.error("[Onboarding] Failed to reset FTUE state:", e);
-    }
-  },
-
-  setSlide: (currentSlide) => set({ currentSlide }),
-}));
+export const useOnboardingStore = create<OnboardingState>()(
+  persist(
+    (set) => ({
+      hasCompletedFTUE: false,
+      hydrated: false,
+      markHydrated: () => set({ hydrated: true }),
+      completeFTUE: () => set({ hasCompletedFTUE: true }),
+      resetFTUE: () => set({ hasCompletedFTUE: false }),
+    }),
+    {
+      name: "endorphix-onboarding",
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: ({ hasCompletedFTUE }) => ({ hasCompletedFTUE }),
+      onRehydrateStorage: () => (state) => state?.markHydrated(),
+    },
+  ),
+);

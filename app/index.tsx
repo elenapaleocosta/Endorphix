@@ -1,35 +1,24 @@
+import { ActivityIndicator, View } from "react-native";
 import { Redirect } from "expo-router";
 import { useAuthStore } from "@/store/auth.store";
 import { useOnboardingStore } from "@/store/onboarding.store";
-import { View, ActivityIndicator } from "react-native";
 import { Colors } from "@/constants";
 
 export default function Index() {
-  const { isAuthenticated, isLoading: authLoading } = useAuthStore();
-  const { hasCompletedFTUE, isLoading: onboardingLoading } = useOnboardingStore();
+  const authReady = useAuthStore((s) => s.hydrated);
+  const signedIn = useAuthStore((s) => s.user !== null);
+  const onboardingReady = useOnboardingStore((s) => s.hydrated);
+  const hasCompletedFTUE = useOnboardingStore((s) => s.hasCompletedFTUE);
 
-  if (authLoading || onboardingLoading) {
+  if (!authReady || !onboardingReady) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: Colors.chalk,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <ActivityIndicator color={Colors.olive} size="large" />
+      <View className="flex-1 items-center justify-center bg-chalk">
+        <ActivityIndicator color={Colors.olive} size="large" accessibilityLabel="Loading endorphix" />
       </View>
     );
   }
 
-  if (!hasCompletedFTUE) {
-    return <Redirect href="/(onboarding)" />;
-  }
-
-  if (!isAuthenticated) {
-    return <Redirect href="/(auth)/sign-in" />;
-  }
-
+  if (!hasCompletedFTUE) return <Redirect href="/(onboarding)" />;
+  if (!signedIn) return <Redirect href="/(auth)/sign-in" />;
   return <Redirect href="/(tabs)/discover" />;
 }

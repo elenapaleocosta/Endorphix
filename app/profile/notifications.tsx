@@ -1,264 +1,80 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
-  Platform,
-} from "react-native";
+import { View } from "react-native";
 import { useRouter } from "expo-router";
-import { MotiView } from "moti";
-import { useAuthStore } from "@/store/auth.store";
-import { useHaptics } from "@/hooks/useHaptics";
-import { showAlert } from "@/lib/alert";
-import { ResponsiveContainer } from "@/components/ResponsiveContainer";
-import { useResponsive } from "@/hooks/useResponsive";
-import { Colors, Spacing } from "@/constants";
+import { MAX_RADIUS_KM } from "@/constants";
+import { goBackOr } from "@/lib/navigation";
+import { useAuthStore, type NotificationPreferences } from "@/store/auth.store";
+import { Card, ListRow, PageHeader, Screen, SectionHeader, Toggle } from "@/components/ui";
 
-interface NotificationRowProps {
-  title: string;
-  subtitle: string;
-  badge?: string;
-  value: boolean;
-  onValueChange: (val: boolean) => void;
-}
+type Row = { key: keyof NotificationPreferences; title: string; subtitle: string };
 
-function NotificationRow({
-  title,
-  subtitle,
-  badge,
-  value,
-  onValueChange,
-}: NotificationRowProps) {
-  return (
-    <View
-      style={{
-        backgroundColor: Colors.sand,
-        borderWidth: 1,
-        borderColor: Colors.sandDark,
-        borderRadius: 16,
-        padding: 16,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 12,
-      }}
-    >
-      <View style={{ flex: 1, paddingRight: 16 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-          <Text
-            style={{
-              color: Colors.espresso,
-              fontSize: 14.5,
-              fontWeight: "700",
-            }}
-          >
-            {title}
-          </Text>
-          {badge && (
-            <View
-              style={{
-                backgroundColor: Colors.olive + "22",
-                paddingHorizontal: 6,
-                paddingVertical: 2,
-                borderRadius: 4,
-              }}
-            >
-              <Text style={{ color: Colors.olive, fontSize: 9.5, fontWeight: "800" }}>
-                {badge}
-              </Text>
-            </View>
-          )}
-        </View>
-        <Text style={{ color: Colors.espressoMuted, fontSize: 12, lineHeight: 17 }}>
-          {subtitle}
-        </Text>
-      </View>
-
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: Colors.sandDark, true: Colors.olive }}
-        thumbColor={Colors.chalk}
-      />
-    </View>
-  );
-}
+const GROUPS: { title: string; rows: Row[] }[] = [
+  {
+    title: "Check-ins & alerts",
+    rows: [
+      {
+        key: "activityAlerts",
+        title: "30-min post-session check-in",
+        subtitle: "A prompt to rate your endorphin high half an hour after a session ends.",
+      },
+      {
+        key: "pushNotifications",
+        title: "Push notifications",
+        subtitle: `New court slots and top-rated venues opening up within ${MAX_RADIUS_KM} km.`,
+      },
+    ],
+  },
+  {
+    title: "Email",
+    rows: [
+      {
+        key: "emailUpdates",
+        title: "Weekly wave digest",
+        subtitle: "Your streaks, average endorphin index and momentum.",
+      },
+      {
+        key: "marketingMessages",
+        title: "Events and retreats",
+        subtitle: "Occasional invitations to tournaments and athletic retreats.",
+      },
+    ],
+  },
+];
 
 export default function NotificationsScreen() {
-  const { isPhone, isTablet, isDesktop } = useResponsive();
   const router = useRouter();
-  const { tap, selection, success } = useHaptics();
-  const { notifications, setNotifications } = useAuthStore();
-
-  const [pushEnabled, setPushEnabled] = useState(notifications.pushNotifications);
-  const [emailEnabled, setEmailEnabled] = useState(notifications.emailUpdates);
-  const [activityAlertsEnabled, setActivityAlertsEnabled] = useState(notifications.activityAlerts);
-  const [marketingEnabled, setMarketingEnabled] = useState(notifications.marketingMessages);
-
-  const handleSavePreferences = () => {
-    tap();
-    setNotifications({
-      pushNotifications: pushEnabled,
-      emailUpdates: emailEnabled,
-      activityAlerts: activityAlertsEnabled,
-      marketingMessages: marketingEnabled,
-    });
-    success();
-    showAlert("Cadence Saved", "Your notification preferences have been saved.");
-    router.back();
-  };
+  const notifications = useAuthStore((s) => s.notifications);
+  const setNotification = useAuthStore((s) => s.setNotification);
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.chalk }}>
-      <ScrollView
-        contentContainerStyle={{
-          paddingBottom: 60,
-          paddingTop: Platform.OS === "ios" ? 56 : 40,
-          paddingHorizontal: Spacing.xl,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        <ResponsiveContainer maxWidth={640} noPadding>
-        {/* Header */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 24,
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 19,
-              backgroundColor: Colors.sand,
-              borderWidth: 1,
-              borderColor: Colors.sandDark,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Text style={{ color: Colors.espresso, fontSize: 18, fontWeight: "700" }}>←</Text>
-          </TouchableOpacity>
+    <Screen width="narrow">
+      <PageHeader
+        title="Notifications"
+        subtitle="Changes save automatically."
+        onBack={() => goBackOr(router, "/(tabs)/profile")}
+      />
 
-          <Text style={{ color: Colors.espresso, fontSize: 18, fontWeight: "800" }}>
-            Notification Preferences
-          </Text>
-
-          <TouchableOpacity onPress={handleSavePreferences}>
-            <Text style={{ color: Colors.olive, fontSize: 14, fontWeight: "800" }}>
-              Save
-            </Text>
-          </TouchableOpacity>
+      {GROUPS.map((group) => (
+        <View key={group.title} className="mb-6">
+          <SectionHeader title={group.title} />
+          <Card flush>
+            {group.rows.map((row, i) => (
+              <ListRow
+                key={row.key}
+                title={row.title}
+                subtitle={row.subtitle}
+                last={i === group.rows.length - 1}
+                trailing={
+                  <Toggle
+                    accessibilityLabel={row.title}
+                    value={notifications[row.key]}
+                    onChange={(value) => setNotification(row.key, value)}
+                  />
+                }
+              />
+            ))}
+          </Card>
         </View>
-
-        {/* Section 1: Somatic & Real-Time Alerts */}
-        <MotiView
-          from={{ opacity: 0, translateY: 10 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 350 }}
-        >
-          <Text
-            style={{
-              color: Colors.olive,
-              fontSize: 11,
-              fontWeight: "800",
-              letterSpacing: 1.5,
-              marginBottom: 10,
-            }}
-          >
-            ACTIVE SIGNALS & SOMATIC PROTOCOLS
-          </Text>
-
-          {/* Activity / Alerts */}
-          <NotificationRow
-            title="Activity & 30m Post-Session Alerts"
-            badge="RECOMMENDED"
-            subtitle="Triggers the in-phone somatic notification exactly 30 minutes after your workout concludes so you can slide your Endorphin High."
-            value={activityAlertsEnabled}
-            onValueChange={(val) => {
-              selection();
-              setActivityAlertsEnabled(val);
-            }}
-          />
-
-          {/* Push Notifications */}
-          <NotificationRow
-            title="Push Notifications"
-            subtitle="Real-time alerts when top-rated facilities enter live activity within your 50km radius or when new court slots open."
-            value={pushEnabled}
-            onValueChange={(val) => {
-              selection();
-              setPushEnabled(val);
-            }}
-          />
-        </MotiView>
-
-        {/* Section 2: Digests & Editorial */}
-        <MotiView
-          from={{ opacity: 0, translateY: 10 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 350, delay: 100 }}
-          style={{ marginTop: 12 }}
-        >
-          <Text
-            style={{
-              color: Colors.espressoMuted,
-              fontSize: 11,
-              fontWeight: "800",
-              letterSpacing: 1.5,
-              marginBottom: 10,
-            }}
-          >
-            COMMUNICATIONS & DIGESTS
-          </Text>
-
-          {/* Email Updates */}
-          <NotificationRow
-            title="Email Updates & Wave Digest"
-            subtitle="Weekly editorial summary of your consecutive streaks, average endorphin index, and vitality momentum."
-            value={emailEnabled}
-            onValueChange={(val) => {
-              selection();
-              setEmailEnabled(val);
-            }}
-          />
-
-          {/* Marketing Messages */}
-          <NotificationRow
-            title="Marketing Messages"
-            subtitle="Occasional invitations to country club tournaments, athletic retreats, and exclusive charter releases."
-            value={marketingEnabled}
-            onValueChange={(val) => {
-              selection();
-              setMarketingEnabled(val);
-            }}
-          />
-        </MotiView>
-
-        {/* Save Button */}
-        <TouchableOpacity
-          onPress={handleSavePreferences}
-          activeOpacity={0.88}
-          style={{
-            backgroundColor: Colors.olive,
-            borderRadius: 14,
-            paddingVertical: 16,
-            alignItems: "center",
-            marginTop: 20,
-          }}
-        >
-          <Text style={{ color: Colors.chalk, fontSize: 14.5, fontWeight: "800", letterSpacing: 0.5 }}>
-            Save Notification Preferences →
-          </Text>
-        </TouchableOpacity>
-        </ResponsiveContainer>
-      </ScrollView>
-    </View>
+      ))}
+    </Screen>
   );
 }

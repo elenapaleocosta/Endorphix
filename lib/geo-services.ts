@@ -1,7 +1,8 @@
-// ─── OpenStreetMap (Overpass API) & Google Places API Service Layer ─────────
+// ─── OpenStreetMap (Overpass API) service layer with curated fallback ─────────
 // Type-safe external data binding with robust fallback handling.
 
-import type { Facility, GeoPoint, SportCategory, MacroRealm, FacilityOnsiteActivity, TourPlan } from "@/types";
+import { sportLabel } from "@/utils";
+import type { Facility, GeoPoint, SportCategory, MacroRealm, TourPlan } from "@/types";
 
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
@@ -11,7 +12,6 @@ const OVERPASS_ENDPOINTS = [
 
 // 5-minute memory cache to prevent redundant Overpass requests and rate-limiting
 const overpassCache = new Map<string, { timestamp: number; facilities: Facility[] }>();
-const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 
 // Curated high-prestige athletic facilities (used as base and immediate fallback)
 export const CURATED_HERITAGE_FACILITIES: Facility[] = [
@@ -403,6 +403,22 @@ export const CURATED_HERITAGE_FACILITIES: Facility[] = [
   },
 ];
 
+// Facilities seen in any result set, so detail screens can resolve ids from every source.
+const facilityRegistry = new Map<string, Facility>();
+
+export function rememberFacilities(facilities: Facility[]): Facility[] {
+  for (const facility of facilities) facilityRegistry.set(facility.id, facility);
+  return facilities;
+}
+
+export function getKnownFacility(id: string): Facility | undefined {
+  const seen = facilityRegistry.get(id);
+  if (seen) return seen;
+  const curated = CURATED_HERITAGE_FACILITIES.find((f) => f.id === id);
+  // Distance is only meaningful relative to the user, which isn't known here.
+  return curated && { ...curated, distance_meters: undefined };
+}
+
 // Helper: Haversine distance in meters
 export function calculateHaversineDistance(
   coord1: GeoPoint,
@@ -511,38 +527,30 @@ export async function queryOsmOverpassFacilities(
             sports = ["tennis"];
           }
 
-          const street = el.tags["addr:street"]
-            ? `${el.tags["addr:street"]} ${el.tags["addr:housenumber"] || ""}`
-            : `Proximity Sector ${idx + 1}, Metro District`;
+          const address = [
+            [el.tags["addr:street"], el.tags["addr:housenumber"]].filter(Boolean).join(" "),
+            el.tags["addr:city"],
+          ]
+            .filter(Boolean)
+            .join(", ");
 
           return {
-            id: `osm-${el.id || idx}`,
+            id: `osm-${el.id ?? idx}`,
             name,
-            description: el.tags.description || `Verified athletic grounds registered under OpenStreetMap infrastructure.`,
-            address: street,
+            description: el.tags.description,
+            address,
             location: { latitude: itemLat, longitude: itemLng },
             distance_meters: distance,
             macro_realm: macro,
             primary_sports: sports,
-            secondary_sports: ["gym"],
-            rating: Number((4.6 + (idx % 4) * 0.1).toFixed(2)),
-            review_count: 45 + idx * 12,
-            timetable: {
-              monday: { open: "07:00", close: "22:00" },
-              tuesday: { open: "07:00", close: "22:00" },
-              wednesday: { open: "07:00", close: "22:00" },
-              thursday: { open: "07:00", close: "22:00" },
-              friday: { open: "07:00", close: "22:00" },
-              saturday: { open: "08:00", close: "20:00" },
-              sunday: { open: "08:00", close: "18:00" },
-            },
-            phone: el.tags.phone || "+44 20 7000 0000",
-            website: el.tags.website || "https://endorphix.app",
-            images: [
-              CURATED_HERITAGE_FACILITIES[idx % CURATED_HERITAGE_FACILITIES.length].images[0],
-            ],
+            secondary_sports: [],
+            rating: 0,
+            review_count: 0,
+            timetable: {},
+            phone: el.tags.phone,
+            website: el.tags.website,
+            images: [],
             osm_id: String(el.id),
-            price_level: ((idx % 3) + 2) as 2 | 3 | 4,
             verified_source: "osm_overpass",
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -550,8 +558,8 @@ export async function queryOsmOverpassFacilities(
         });
 
       // Combine with curated facilities
-      const combined = [...parsedFacilities, ...CURATED_HERITAGE_FACILITIES];
-      const result = filterAndSortFacilities(combined, origin, radiusMeters, sportFilter);
+      const combined = [...parsedFacilities, ...withDistanceFrom(origin, CURATED_HERITAGE_FACILITIES)];
+      const result = filterAndSortFacilities(combined, radiusMeters, sportFilter);
 
       // Save to cache
       overpassCache.set(cacheKey, { timestamp: Date.now(), facilities: result });
@@ -574,17 +582,22 @@ export function getFilteredCuratedFacilities(
   radiusMeters: number = 50000,
   sportFilter?: SportCategory | MacroRealm
 ): Facility[] {
-  const updated = CURATED_HERITAGE_FACILITIES.map((fac) => ({
+  return filterAndSortFacilities(
+    withDistanceFrom(origin, CURATED_HERITAGE_FACILITIES),
+    radiusMeters,
+    sportFilter,
+  );
+}
+
+function withDistanceFrom(origin: GeoPoint, facilities: Facility[]): Facility[] {
+  return facilities.map((fac) => ({
     ...fac,
     distance_meters: calculateHaversineDistance(origin, fac.location),
   }));
-
-  return filterAndSortFacilities(updated, origin, radiusMeters, sportFilter);
 }
 
 function filterAndSortFacilities(
   facilities: Facility[],
-  origin: GeoPoint,
   radiusMeters: number,
   filter?: SportCategory | MacroRealm
 ): Facility[] {
@@ -609,8 +622,8 @@ function filterAndSortFacilities(
     if (!map.has(item.id)) map.set(item.id, item);
   }
 
-  return Array.from(map.values()).sort(
-    (a, b) => (a.distance_meters ?? 0) - (b.distance_meters ?? 0)
+  return rememberFacilities(
+    Array.from(map.values()).sort((a, b) => (a.distance_meters ?? 0) - (b.distance_meters ?? 0)),
   );
 }
 
@@ -652,7 +665,7 @@ export function generateDestinationActionPackages(
       activities: [
         {
           timeOfDay: "Morning" as const,
-          title: `07:30 ${primaryVenue.primary_sports[0]?.toUpperCase() || "ATHLETIC"} SESSION`,
+          title: `07:30 · ${sportLabel(primaryVenue.primary_sports[0] ?? "other")} session`,
           sport: primaryVenue.primary_sports[0] || "tennis",
           facility: primaryVenue,
           intensity: "High" as const,
@@ -660,7 +673,7 @@ export function generateDestinationActionPackages(
         },
         {
           timeOfDay: "Afternoon" as const,
-          title: `14:00 EXPANDED ENERGY PROTOCOL`,
+          title: "14:00 · Recovery protocol",
           sport: secondaryVenue.primary_sports[0] || "swimming",
           facility: secondaryVenue,
           intensity: "Recovery" as const,

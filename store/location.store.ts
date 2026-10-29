@@ -1,21 +1,17 @@
 import { create } from "zustand";
 import type { GeoPoint } from "@/types";
 
+export type LocationStatus = "pending" | "granted" | "fallback";
+
 interface LocationState {
   userLocation: GeoPoint | null;
-  locationPermission: "undetermined" | "granted" | "denied";
-  isLoadingLocation: boolean;
-  setUserLocation: (location: GeoPoint | null) => void;
-  setLocationPermission: (status: LocationState["locationPermission"]) => void;
-  setLoadingLocation: (loading: boolean) => void;
+  /** "fallback" means the device location was unavailable and FALLBACK_LOCATION is in use. */
+  status: LocationStatus;
+  setLocation: (location: GeoPoint, status: Exclude<LocationStatus, "pending">) => void;
 }
 
 export const useLocationStore = create<LocationState>((set) => ({
   userLocation: null,
-  locationPermission: "undetermined",
-  isLoadingLocation: false,
-
-  setUserLocation: (userLocation) => set({ userLocation }),
-  setLocationPermission: (locationPermission) => set({ locationPermission }),
-  setLoadingLocation: (isLoadingLocation) => set({ isLoadingLocation }),
+  status: "pending",
+  setLocation: (userLocation, status) => set({ userLocation, status }),
 }));

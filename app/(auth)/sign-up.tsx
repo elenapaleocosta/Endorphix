@@ -1,424 +1,194 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from "react-native";
-import { useRouter, Link } from "expo-router";
-import { MotiView } from "moti";
+import { useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { Link, useRouter } from "expo-router";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { haptics } from "@/lib/haptics";
+import { MIN_PASSWORD_LENGTH, compactErrors, emailError, errorMessage, requiredError } from "@/lib/validation";
 import { useAuthStore } from "@/store/auth.store";
-import { useHaptics } from "@/hooks/useHaptics";
-import { showAlert } from "@/lib/alert";
-import { Colors, Spacing } from "@/constants";
+import { Button, PageHeader, Screen, TextField } from "@/components/ui";
+import type { User } from "@/types";
+
+type Field = "firstName" | "lastName" | "nickname" | "email" | "password";
+type FormState = Record<Field, string>;
+
+const EMPTY_FORM: FormState = { firstName: "", lastName: "", nickname: "", email: "", password: "" };
+
+function validate(form: FormState) {
+  return compactErrors({
+    firstName: requiredError(form.firstName, "first name"),
+    lastName: requiredError(form.lastName, "surname"),
+    email: emailError(form.email),
+    password:
+      form.password.length < MIN_PASSWORD_LENGTH ? `Use at least ${MIN_PASSWORD_LENGTH} characters.` : undefined,
+  });
+}
+
+function toUsername(form: FormState) {
+  const base = form.nickname.trim() || `${form.firstName}_${form.lastName}`;
+  return base.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 24);
+}
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const { tap, success, error: errorHaptic } = useHaptics();
-  const { setUser } = useAuthStore();
+  const setUser = useAuthStore((s) => s.setUser);
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
+  const [notice, setNotice] = useState<{ tone: "error" | "info"; text: string } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const update = (field: Field) => (value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
 
   const handleSignUp = async () => {
-    tap();
-    if (!firstName || !lastName || !email || !password) {
-      showAlert(
-        "Missing Information",
-        "Please provide your Name, Surname, Email, and Password to issue your vitality passport."
-      );
+    const nextErrors = validate(form);
+    setErrors(nextErrors);
+    setNotice(null);
+    if (Object.keys(nextErrors).length) {
+      haptics.error();
       return;
     }
 
-    setIsLoading(true);
+    const now = new Date().toISOString();
+    const profile: Omit<User, "id"> = {
+      email: form.email.trim(),
+      username: toUsername(form),
+      first_name: form.firstName.trim(),
+      last_name: form.lastName.trim(),
+      nickname: form.nickname.trim() || undefined,
+      display_name: `${form.firstName.trim()} ${form.lastName.trim()}`,
+      streak_current: 0,
+      streak_longest: 0,
+      lifetime_sessions: 0,
+      created_at: now,
+      updated_at: now,
+    };
+
+    setSubmitting(true);
     try {
-      const generatedUsername = (
-        nickname || `${firstName.toLowerCase()}_${lastName.toLowerCase()}`
-      )
-        .replace(/\s+/g, "_")
-        .slice(0, 24);
+      let id = `local-${Date.now()}`;
 
       if (isSupabaseConfigured) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
+        const { data, error } = await supabase.auth.signUp({ email: profile.email, password: form.password });
+        if (error) throw error;
+        if (!data.user) throw new Error("Registration failed. Please try again.");
 
-        if (error) {
-          errorHaptic();
-          showAlert("Registration Notice", error.message);
-          setIsLoading(false);
+        const { error: insertError } = await supabase.from("users").insert({
+          id: data.user.id,
+          email: profile.email,
+          username: profile.username,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          nickname: profile.nickname ?? null,
+        });
+        if (insertError) throw insertError;
+
+        if (!data.session) {
+          setNotice({ tone: "info", text: "Check your inbox to confirm your email, then sign in." });
           return;
         }
-
-        if (data.user) {
-          await supabase.from("users").insert({
-            id: data.user.id,
-            email,
-            username: generatedUsername,
-            first_name: firstName,
-            last_name: lastName,
-            nickname: nickname || null,
-          });
-        }
+        id = data.user.id;
       }
 
-      // Store in Auth Store
-      const newAthlete = {
-        id: "athlete-" + Date.now(),
-        email,
-        username: generatedUsername,
-        first_name: firstName,
-        last_name: lastName,
-        nickname: nickname || `${firstName} "${nickname || 'Velocity'}" ${lastName}`,
-        display_name: `${firstName} ${lastName}`,
-        bio: `Athlete specializing in high-intensity endurance. Vitality passport activated.`,
-        avatar_url: "",
-        streak_current: 1,
-        streak_longest: 1,
-        lifetime_sessions: 1,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      setUser(newAthlete);
-      success();
-      showAlert(
-        "Vitality Passport Issued",
-        `Welcome to endorphix, ${firstName}. Your passport is active within a 50km radius.`
-      );
+      setUser({ id, ...profile });
+      haptics.success();
       router.replace("/(tabs)/discover");
-    } catch (err: any) {
-      errorHaptic();
-      showAlert("Registration Error", err.message || "An unexpected error occurred");
+    } catch (err) {
+      haptics.error();
+      setNotice({ tone: "error", text: errorMessage(err, "Registration failed. Please try again.") });
     } finally {
-      setIsLoading(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1, backgroundColor: Colors.chalk }}
-    >
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "center",
-          paddingHorizontal: Spacing.xl,
-          paddingVertical: Spacing["2xl"],
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={{ width: "100%", maxWidth: 460, alignSelf: "center" }}>
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 500 }}
-        >
-          {/* Header */}
-          <View style={{ marginBottom: 28 }}>
-            <Text
-              style={{
-                color: Colors.olive,
-                fontSize: 11,
-                fontWeight: "800",
-                letterSpacing: 2.5,
-                marginBottom: 8,
-              }}
-            >
-              NEW ATHLETE REGISTRATION
-            </Text>
-            <Text
-              style={{
-                color: Colors.espresso,
-                fontSize: 32,
-                fontWeight: "800",
-                letterSpacing: -0.8,
-                marginBottom: 8,
-              }}
-            >
-              Issue your Vitality Passport.
-            </Text>
-            <Text
-              style={{
-                color: Colors.espressoMuted,
-                fontSize: 14,
-                lineHeight: 22,
-              }}
-            >
-              Capture your athlete credentials to bridge intention into somatic action.
-            </Text>
+    <Screen width="narrow">
+      <PageHeader
+        eyebrow="New athlete"
+        title="Create your passport."
+        subtitle="A few details and you're ready to find your next session."
+      />
+
+      <View className="gap-4">
+        <View className="gap-4 sm:flex-row">
+          <View className="sm:flex-1">
+            <TextField
+              label="First name"
+              value={form.firstName}
+              onChangeText={update("firstName")}
+              error={errors.firstName}
+              autoCapitalize="words"
+              autoComplete="given-name"
+              textContentType="givenName"
+            />
           </View>
-
-          {/* Form Fields: Name, Surname, Nickname, Email, Password */}
-          <View style={{ gap: 14, marginBottom: 24 }}>
-            {/* First & Last Name row */}
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    color: Colors.espresso,
-                    fontSize: 11.5,
-                    fontWeight: "700",
-                    letterSpacing: 0.5,
-                    marginBottom: 6,
-                  }}
-                >
-                  NAME (FIRST)
-                </Text>
-                <TextInput
-                  value={firstName}
-                  onChangeText={setFirstName}
-                  placeholder="e.g. Julian"
-                  placeholderTextColor={Colors.espressoFaint}
-                  autoCapitalize="words"
-                  style={{
-                    backgroundColor: Colors.sand,
-                    borderRadius: 12,
-                    paddingHorizontal: 14,
-                    paddingVertical: 13,
-                    color: Colors.espresso,
-                    fontSize: 14.5,
-                    fontWeight: "500",
-                    borderWidth: 1,
-                    borderColor: Colors.sandDark,
-                  }}
-                />
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    color: Colors.espresso,
-                    fontSize: 11.5,
-                    fontWeight: "700",
-                    letterSpacing: 0.5,
-                    marginBottom: 6,
-                  }}
-                >
-                  SURNAME
-                </Text>
-                <TextInput
-                  value={lastName}
-                  onChangeText={setLastName}
-                  placeholder="e.g. Sterling"
-                  placeholderTextColor={Colors.espressoFaint}
-                  autoCapitalize="words"
-                  style={{
-                    backgroundColor: Colors.sand,
-                    borderRadius: 12,
-                    paddingHorizontal: 14,
-                    paddingVertical: 13,
-                    color: Colors.espresso,
-                    fontSize: 14.5,
-                    fontWeight: "500",
-                    borderWidth: 1,
-                    borderColor: Colors.sandDark,
-                  }}
-                />
-              </View>
-            </View>
-
-            {/* Nickname field */}
-            <View>
-              <Text
-                style={{
-                  color: Colors.espresso,
-                  fontSize: 11.5,
-                  fontWeight: "700",
-                  letterSpacing: 0.5,
-                  marginBottom: 6,
-                }}
-              >
-                NICKNAME / CALLSIGN (OPTIONAL)
-              </Text>
-              <TextInput
-                value={nickname}
-                onChangeText={setNickname}
-                placeholder="e.g. The Cadence / Swift"
-                placeholderTextColor={Colors.espressoFaint}
-                autoCapitalize="words"
-                style={{
-                  backgroundColor: Colors.sand,
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 13,
-                  color: Colors.espresso,
-                  fontSize: 14.5,
-                  fontWeight: "500",
-                  borderWidth: 1,
-                  borderColor: Colors.sandDark,
-                }}
-              />
-            </View>
-
-            {/* Email */}
-            <View>
-              <Text
-                style={{
-                  color: Colors.espresso,
-                  fontSize: 11.5,
-                  fontWeight: "700",
-                  letterSpacing: 0.5,
-                  marginBottom: 6,
-                }}
-              >
-                ATHLETE EMAIL
-              </Text>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="athlete@domain.com"
-                placeholderTextColor={Colors.espressoFaint}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                style={{
-                  backgroundColor: Colors.sand,
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 13,
-                  color: Colors.espresso,
-                  fontSize: 14.5,
-                  fontWeight: "500",
-                  borderWidth: 1,
-                  borderColor: Colors.sandDark,
-                }}
-              />
-            </View>
-
-            {/* Password */}
-            <View>
-              <Text
-                style={{
-                  color: Colors.espresso,
-                  fontSize: 11.5,
-                  fontWeight: "700",
-                  letterSpacing: 0.5,
-                  marginBottom: 6,
-                }}
-              >
-                CONFIDENTIAL KEY (PASSWORD)
-              </Text>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Minimum 8 characters"
-                placeholderTextColor={Colors.espressoFaint}
-                secureTextEntry
-                style={{
-                  backgroundColor: Colors.sand,
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 13,
-                  color: Colors.espresso,
-                  fontSize: 14.5,
-                  fontWeight: "500",
-                  borderWidth: 1,
-                  borderColor: Colors.sandDark,
-                }}
-              />
-            </View>
+          <View className="sm:flex-1">
+            <TextField
+              label="Surname"
+              value={form.lastName}
+              onChangeText={update("lastName")}
+              error={errors.lastName}
+              autoCapitalize="words"
+              autoComplete="family-name"
+              textContentType="familyName"
+            />
           </View>
-
-          {/* Submit Action */}
-          <TouchableOpacity
-            onPress={handleSignUp}
-            disabled={isLoading}
-            activeOpacity={0.88}
-            style={{
-              backgroundColor: Colors.olive,
-              borderRadius: 14,
-              paddingVertical: 16,
-              alignItems: "center",
-              marginBottom: 20,
-            }}
-          >
-            <Text
-              style={{
-                color: Colors.chalk,
-                fontSize: 15,
-                fontWeight: "800",
-                letterSpacing: 0.8,
-              }}
-            >
-              {isLoading ? "Generating Passport..." : "Activate Vitality Passport →"}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Social-Ready Alternatives */}
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 16,
-            }}
-          >
-            <TouchableOpacity
-              onPress={() => showAlert("Social Access", "Apple ID registration ready.")}
-              style={{
-                backgroundColor: Colors.sand,
-                borderWidth: 1,
-                borderColor: Colors.sandDark,
-                paddingHorizontal: 14,
-                paddingVertical: 9,
-                borderRadius: 10,
-              }}
-            >
-              <Text style={{ color: Colors.espresso, fontSize: 12, fontWeight: "700" }}>
-                Apple ID
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => showAlert("Social Access", "Google registration ready.")}
-              style={{
-                backgroundColor: Colors.sand,
-                borderWidth: 1,
-                borderColor: Colors.sandDark,
-                paddingHorizontal: 14,
-                paddingVertical: 9,
-                borderRadius: 10,
-              }}
-            >
-              <Text style={{ color: Colors.espresso, fontSize: 12, fontWeight: "700" }}>
-                Google
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Footer Back Link */}
-          <View style={{ flexDirection: "row", justifyContent: "center", gap: 6 }}>
-            <Text style={{ color: Colors.espressoMuted, fontSize: 13 }}>
-              Already hold an endorphix passport?
-            </Text>
-            <Link href="/(auth)/sign-in" asChild>
-              <TouchableOpacity>
-                <Text
-                  style={{
-                    color: Colors.olive,
-                    fontSize: 13,
-                    fontWeight: "800",
-                  }}
-                >
-                  Sign In
-                </Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </MotiView>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <TextField
+          label="Nickname (optional)"
+          value={form.nickname}
+          onChangeText={update("nickname")}
+          hint="Shown on your passport and used for your username."
+          autoCapitalize="words"
+          autoComplete="nickname"
+          textContentType="nickname"
+        />
+        <TextField
+          label="Email"
+          value={form.email}
+          onChangeText={update("email")}
+          error={errors.email}
+          placeholder="you@example.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          textContentType="emailAddress"
+        />
+        <TextField
+          label="Password"
+          value={form.password}
+          onChangeText={update("password")}
+          error={errors.password}
+          hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+          secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          returnKeyType="go"
+          onSubmitEditing={handleSignUp}
+        />
+
+        {notice ? (
+          <Text
+            accessibilityRole="alert"
+            className={`text-sm font-medium ${notice.tone === "error" ? "text-terracotta" : "text-ink"}`}
+          >
+            {notice.text}
+          </Text>
+        ) : null}
+
+        <Button label="Create passport" onPress={handleSignUp} loading={submitting} className="mt-2" />
+      </View>
+
+      <View className="mt-6 flex-row flex-wrap items-center justify-center gap-1">
+        <Text className="text-sm text-ink-muted">Already have a passport?</Text>
+        <Link href="/(auth)/sign-in" asChild>
+          <Pressable accessibilityRole="link" className="min-h-10 justify-center px-1">
+            <Text className="text-sm font-bold text-olive">Sign in</Text>
+          </Pressable>
+        </Link>
+      </View>
+    </Screen>
   );
 }

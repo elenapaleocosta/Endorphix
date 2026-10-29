@@ -1,336 +1,134 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
-  Platform,
-} from "react-native";
+import { useState } from "react";
+import { Platform, Share, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { MotiView } from "moti";
+import { haptics } from "@/lib/haptics";
+import { showAlert } from "@/lib/alert";
+import { goBackOr } from "@/lib/navigation";
+import { queryClient } from "@/lib/query-client";
+import { errorMessage } from "@/lib/validation";
+import { clearLocalEnergyLogs, useEnergyLogs } from "@/hooks/useEnergy";
 import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
-import { useEnergyLogs, useEnergyWave } from "@/hooks/useEnergy";
-import { useHaptics } from "@/hooks/useHaptics";
-import { showAlert } from "@/lib/alert";
-import { ResponsiveContainer } from "@/components/ResponsiveContainer";
-import { useResponsive } from "@/hooks/useResponsive";
-import { Colors, Spacing } from "@/constants";
+import { Button, Card, ListRow, PageHeader, Screen, SectionHeader, Toggle } from "@/components/ui";
+
+function downloadOnWeb(filename: string, json: string) {
+  const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  // Revoking synchronously can cancel the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
 
 export default function PrivacyScreen() {
-  const { isPhone, isTablet, isDesktop } = useResponsive();
   const router = useRouter();
-  const { tap, selection, confirm, success, error: errorHaptic } = useHaptics();
-  const { user, privacy, setPrivacy, deleteAccount } = useAuthStore();
-  const { bookings } = useBookingStore();
-  const { data: logs } = useEnergyLogs();
-  const { data: waveData } = useEnergyWave(30);
+  const user = useAuthStore((s) => s.user);
+  const profileVisibility = useAuthStore((s) => s.profileVisibility);
+  const setProfileVisibility = useAuthStore((s) => s.setProfileVisibility);
+  const eraseAll = useAuthStore((s) => s.eraseAll);
+  const bookings = useBookingStore((s) => s.bookings);
+  const resetBookings = useBookingStore((s) => s.reset);
+  const logs = useEnergyLogs();
+  const [exportStatus, setExportStatus] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
-  const [isPublic, setIsPublic] = useState(privacy.profileVisibility === "public");
-  const [isExporting, setIsExporting] = useState(false);
+  const isPublic = profileVisibility === "public";
 
-  const handleToggleVisibility = (newValue: boolean) => {
-    selection();
-    setIsPublic(newValue);
-    setPrivacy({ profileVisibility: newValue ? "public" : "private" });
-  };
-
-  // ─── Download My Data ───────────────────────────────────────────────────────
-  const handleDownloadMyData = () => {
-    confirm();
-    setIsExporting(true);
-
+  const exportData = async () => {
+    setExportStatus(null);
+    const json = JSON.stringify(
+      { exportedAt: new Date().toISOString(), profile: user, bookings, energyLogs: logs.data ?? [] },
+      null,
+      2,
+    );
     try {
-      const exportPayload = {
-        exportDate: new Date().toISOString(),
-        passportHolder: {
-          id: user?.id,
-          displayName: user?.display_name || `${user?.first_name} ${user?.last_name}`,
-          email: user?.email,
-          username: user?.username,
-          bio: user?.bio,
-          tier: "Charter Athlete",
-        },
-        lifetimeMetrics: {
-          currentStreakDays: user?.streak_current ?? 9,
-          longestStreakDays: user?.streak_longest ?? 24,
-          lifetimeSessions: user?.lifetime_sessions ?? 48,
-          privacyMode: isPublic ? "Public (Charter Member)" : "Private (Incognito Athlete)",
-        },
-        somaticEndorphinLogs: logs || [],
-        energyWaveHistory: waveData || [],
-        bookingsAndCourts: bookings || [],
-      };
-
-      const jsonString = JSON.stringify(exportPayload, null, 2);
-
-      // On Web: Trigger instant browser file download
-      if (Platform.OS === "web" && typeof window !== "undefined") {
-        const blob = new Blob([jsonString], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `endorphix-passport-archive-${Date.now()}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+      if (Platform.OS === "web") {
+        downloadOnWeb(`endorphix-export-${new Date().toISOString().slice(0, 10)}.json`, json);
+        setExportStatus({ tone: "ok", text: "Your export has been downloaded." });
+      } else {
+        const result = await Share.share({ title: "endorphix data export", message: json });
+        if (result.action === Share.sharedAction) setExportStatus({ tone: "ok", text: "Your export is ready." });
       }
-
-      setIsExporting(false);
-      success();
-      showAlert(
-        "Data Export Prepared",
-        `Your complete Vitality Passport archive (profile, ${logs?.length || 2} somatic logs, ${bookings.length} court bookings, and streak metrics) has been packaged and downloaded.`
-      );
-    } catch (err: any) {
-      setIsExporting(false);
-      errorHaptic();
-      showAlert("Export Notice", "Could not complete data export: " + err.message);
+      haptics.success();
+    } catch (err) {
+      haptics.error();
+      setExportStatus({ tone: "error", text: errorMessage(err, "Export failed. Please try again.") });
     }
   };
 
-  // ─── Destructive Account Deletion ───────────────────────────────────────────
-  const handleDeleteAccount = () => {
-    tap();
+  const confirmErase = () =>
     showAlert(
-      "Erase Vitality Passport",
-      "Are you certain? All historical streaks, energy wave logs, and local preferences will be permanently wiped. This action cannot be reversed.",
+      "Erase all data?",
+      "This removes your passport, bookings and energy logs from this device and signs you out. It can't be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Permanently Erase",
+          text: "Erase",
           style: "destructive",
           onPress: () => {
-            deleteAccount();
-            success();
-            showAlert("Passport Erased", "All athlete data has been cleared from this device.");
+            eraseAll();
+            resetBookings();
+            clearLocalEnergyLogs();
+            queryClient.clear();
             router.replace("/(auth)/sign-in");
           },
         },
-      ]
+      ],
     );
-  };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.chalk }}>
-      <ScrollView
-        contentContainerStyle={{
-          paddingBottom: 60,
-          paddingTop: Platform.OS === "ios" ? 56 : 40,
-          paddingHorizontal: Spacing.xl,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        <ResponsiveContainer maxWidth={640} noPadding>
-        {/* Header */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 12,
-            marginBottom: 24,
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 19,
-              backgroundColor: Colors.sand,
-              borderWidth: 1,
-              borderColor: Colors.sandDark,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Text style={{ color: Colors.espresso, fontSize: 18, fontWeight: "700" }}>←</Text>
-          </TouchableOpacity>
-          <Text style={{ color: Colors.espresso, fontSize: 18, fontWeight: "800" }}>
-            Privacy & Data Controls
-          </Text>
-        </View>
+    <Screen width="narrow">
+      <PageHeader title="Privacy & data" onBack={() => goBackOr(router, "/(tabs)/profile")} />
 
-        {/* ─── Profile Visibility Toggle ─── */}
-        <MotiView
-          from={{ opacity: 0, translateY: 10 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 350 }}
-          style={{ marginBottom: 24 }}
-        >
+      <SectionHeader title="Visibility" />
+      <Card flush className="mb-8">
+        <ListRow
+          last
+          title="Public passport"
+          subtitle={
+            isPublic
+              ? "Venues you book with can see your name and streaks."
+              : "Your passport is private. Venues only see your booking."
+          }
+          trailing={
+            <Toggle
+              accessibilityLabel="Public passport"
+              value={isPublic}
+              onChange={(value) => setProfileVisibility(value ? "public" : "private")}
+            />
+          }
+        />
+      </Card>
+
+      <SectionHeader title="Your data" />
+      <Card className="mb-8 gap-3">
+        <Text className="text-sm leading-5 text-ink-muted">
+          Export your profile, bookings and energy logs as a JSON file. No lock-in.
+        </Text>
+        <Button
+          label="Export my data"
+          icon="download-outline"
+          variant="secondary"
+          loading={logs.isPending}
+          onPress={exportData}
+        />
+        {exportStatus ? (
           <Text
-            style={{
-              color: Colors.olive,
-              fontSize: 11,
-              fontWeight: "800",
-              letterSpacing: 1.5,
-              marginBottom: 10,
-            }}
+            accessibilityLiveRegion="polite"
+            className={`text-sm font-medium ${exportStatus.tone === "ok" ? "text-ink" : "text-terracotta"}`}
           >
-            PASSPORT VISIBILITY & PROXIMITY DISCOVERY
+            {exportStatus.text}
           </Text>
+        ) : null}
+      </Card>
 
-          <View
-            style={{
-              backgroundColor: Colors.sand,
-              borderRadius: 18,
-              borderWidth: 1,
-              borderColor: Colors.sandDark,
-              padding: 18,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12,
-              }}
-            >
-              <View style={{ flex: 1, paddingRight: 14 }}>
-                <Text style={{ color: Colors.espresso, fontSize: 15, fontWeight: "800", marginBottom: 3 }}>
-                  {isPublic ? "Charter Athlete (Public)" : "Incognito Athlete (Private)"}
-                </Text>
-                <Text style={{ color: Colors.espressoMuted, fontSize: 12, lineHeight: 17 }}>
-                  {isPublic
-                    ? "Visible to sports clubs and facilities within your 50km radius for seamless check-in and court confirmation."
-                    : "Coordinates remain purely local on your device. Facility lookups remain anonymous."}
-                </Text>
-              </View>
-
-              <Switch
-                value={isPublic}
-                onValueChange={handleToggleVisibility}
-                trackColor={{ false: Colors.sandDark, true: Colors.olive }}
-                thumbColor={Colors.chalk}
-              />
-            </View>
-
-            <View
-              style={{
-                backgroundColor: isPublic ? Colors.olive + "16" : Colors.softChalk,
-                borderRadius: 10,
-                padding: 10,
-                borderWidth: 1,
-                borderColor: isPublic ? Colors.olive + "33" : Colors.sandDark,
-              }}
-            >
-              <Text style={{ color: isPublic ? Colors.olive : Colors.espressoMuted, fontSize: 11, fontWeight: "700" }}>
-                Status: {isPublic ? "✓ Public 50km Radius Broadcast Active" : "○ Local Only (Incognito)"}
-              </Text>
-            </View>
-          </View>
-        </MotiView>
-
-        {/* ─── Download My Data ─── */}
-        <MotiView
-          from={{ opacity: 0, translateY: 10 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 350, delay: 100 }}
-          style={{ marginBottom: 28 }}
-        >
-          <Text
-            style={{
-              color: Colors.espressoMuted,
-              fontSize: 11,
-              fontWeight: "800",
-              letterSpacing: 1.5,
-              marginBottom: 10,
-            }}
-          >
-            DATA ARCHIVE & EXPORT
-          </Text>
-
-          <View
-            style={{
-              backgroundColor: Colors.sand,
-              borderRadius: 18,
-              borderWidth: 1,
-              borderColor: Colors.sandDark,
-              padding: 18,
-            }}
-          >
-            <Text style={{ color: Colors.espresso, fontSize: 15, fontWeight: "800", marginBottom: 4 }}>
-              Download My Data
-            </Text>
-            <Text style={{ color: Colors.espressoMuted, fontSize: 12.5, lineHeight: 18, marginBottom: 14 }}>
-              Export a complete archive of your Vitality Passport, including your biographical records, consecutive streak statistics, and all logged somatic endorphin scores in standard JSON format.
-            </Text>
-
-            <TouchableOpacity
-              onPress={handleDownloadMyData}
-              activeOpacity={0.85}
-              style={{
-                backgroundColor: Colors.navy,
-                borderRadius: 12,
-                paddingVertical: 13,
-                alignItems: "center",
-                flexDirection: "row",
-                justifyContent: "center",
-                gap: 8,
-              }}
-            >
-              <Text style={{ color: Colors.chalk, fontSize: 13, fontWeight: "800", letterSpacing: 0.5 }}>
-                {isExporting ? "Packaging Archive..." : "Download Passport Archive (.json) 📥"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </MotiView>
-
-        {/* ─── Destructive Account Deletion ─── */}
-        <MotiView
-          from={{ opacity: 0, translateY: 10 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 350, delay: 200 }}
-        >
-          <Text
-            style={{
-              color: Colors.terracotta,
-              fontSize: 11,
-              fontWeight: "800",
-              letterSpacing: 1.5,
-              marginBottom: 10,
-            }}
-          >
-            DANGER ZONE · IRREVERSIBLE ACTION
-          </Text>
-
-          <View
-            style={{
-              backgroundColor: Colors.sand,
-              borderRadius: 18,
-              borderWidth: 1.5,
-              borderColor: Colors.terracotta + "66",
-              padding: 18,
-            }}
-          >
-            <Text style={{ color: Colors.espresso, fontSize: 15, fontWeight: "800", marginBottom: 4 }}>
-              Erase Vitality Passport
-            </Text>
-            <Text style={{ color: Colors.espressoMuted, fontSize: 12.5, lineHeight: 18, marginBottom: 14 }}>
-              Permanently purge all athlete identity details, historical streaks, D3 energy wave timelines, and venue preferences. This cannot be recovered.
-            </Text>
-
-            <TouchableOpacity
-              onPress={handleDeleteAccount}
-              activeOpacity={0.85}
-              style={{
-                backgroundColor: Colors.terracotta,
-                borderRadius: 12,
-                paddingVertical: 14,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ color: Colors.chalk, fontSize: 13.5, fontWeight: "800", letterSpacing: 0.5 }}>
-                Erase Vitality Passport Permanently ✕
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </MotiView>
-        </ResponsiveContainer>
-      </ScrollView>
-    </View>
+      <SectionHeader title="Erase" />
+      <View className="gap-3">
+        <Text className="text-sm leading-5 text-ink-muted">
+          Removes everything endorphix stores on this device and signs you out.
+        </Text>
+        <Button label="Erase all data" icon="trash-outline" variant="danger" onPress={confirmErase} />
+      </View>
+    </Screen>
   );
 }

@@ -1,6 +1,9 @@
-import React from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
-import { Colors } from "@/constants";
+import { Image, Pressable, Text, View } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { Colors, REALM_BY_ID } from "@/constants";
+import { formatDistance } from "@/utils";
+import { haptics } from "@/lib/haptics";
+import { Skeleton, Tag } from "@/components/ui";
 import type { Facility } from "@/types";
 
 interface FacilityCardProps {
@@ -8,165 +11,75 @@ interface FacilityCardProps {
   onPress: () => void;
 }
 
-const REALM_THEMES: Record<string, { label: string; color: string; bg: string }> = {
-  water: {
-    label: "WATER",
-    color: Colors.camel,
-    bg: Colors.camel + "22",
-  },
-  land: {
-    label: "LAND",
-    color: Colors.olive,
-    bg: Colors.olive + "22",
-  },
-  mountain: {
-    label: "MOUNTAIN",
-    color: Colors.terracotta,
-    bg: Colors.terracotta + "22",
-  },
-};
-
 export function FacilityCard({ facility, onPress }: FacilityCardProps) {
-  const realm = facility.macro_realm || "land";
-  const realmTheme = REALM_THEMES[realm] || REALM_THEMES.land;
-  const imageUrl =
-    facility.images?.[0] ||
-    "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=1200&q=80";
+  const realm = REALM_BY_ID[facility.macro_realm ?? "land"];
+  const distance = formatDistance(facility.distance_meters);
+  const rated = facility.review_count > 0;
+  const image = facility.images[0];
+
+  const a11yLabel = [
+    facility.name,
+    realm.label,
+    rated ? `rated ${facility.rating.toFixed(1)}` : null,
+    distance ? `${distance} away` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.88}
-      style={{
-        backgroundColor: Colors.sand,
-        borderRadius: 16,
-        padding: 14,
-        borderWidth: 1,
-        borderColor: Colors.sandDark,
-        marginBottom: 14,
-        cursor: "pointer" as any,
-        overflow: "hidden",
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+      accessibilityHint="Opens venue details"
+      onPress={() => {
+        haptics.tap();
+        onPress();
       }}
+      className="overflow-hidden rounded-2xl border border-line bg-sand active:opacity-90"
     >
-      {/* Facility Picture */}
-      <Image
-        source={{ uri: imageUrl }}
-        style={{
-          width: "100%",
-          height: 140,
-          borderRadius: 10,
-          backgroundColor: Colors.sandDark,
-          marginBottom: 12,
-        }}
-        resizeMode="cover"
-      />
+      {image ? (
+        <Image source={{ uri: image }} resizeMode="cover" className="h-36 w-full bg-line" />
+      ) : (
+        <View className="h-36 w-full items-center justify-center bg-line">
+          <Ionicons name="image-outline" size={28} color={Colors.inkMuted} />
+        </View>
+      )}
 
-      {/* Badges Row: Realm Badge & Rating Badge */}
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 8,
-          width: "100%",
-        }}
-      >
-        {/* Realm Badge */}
-        <View
-          style={{
-            backgroundColor: realmTheme.bg,
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-            borderRadius: 6,
-            alignSelf: "flex-start",
-          }}
-        >
-          <Text
-            style={{
-              color: realmTheme.color,
-              fontSize: 10,
-              fontWeight: "800",
-              letterSpacing: 1.2,
-            }}
-          >
-            {realmTheme.label}
-          </Text>
+      <View className="gap-2 p-4">
+        <View className="flex-row items-center justify-between gap-2">
+          <Tag label={realm.label} dotColor={realm.accent} />
+          {rated ? (
+            <View className="flex-row items-center gap-1">
+              <Ionicons name="star" size={12} color={Colors.olive} />
+              <Text className="text-sm font-bold text-ink">{facility.rating.toFixed(1)}</Text>
+            </View>
+          ) : null}
         </View>
 
-        {/* Rating Badge (Self-contained, bounded to prevent overflow) */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: Colors.olive,
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-            borderRadius: 6,
-            flexShrink: 0,
-          }}
-        >
-          <Text
-            style={{
-              color: Colors.chalk,
-              fontSize: 11,
-              fontWeight: "800",
-              letterSpacing: 0.3,
-            }}
-          >
-            ★ {facility.rating ? facility.rating.toFixed(1) : "5.0"}
-          </Text>
-        </View>
-      </View>
-
-      {/* Facility Name */}
-      <Text
-        style={{
-          color: Colors.espresso,
-          fontSize: 16,
-          fontWeight: "800",
-          letterSpacing: -0.2,
-          lineHeight: 22,
-          marginBottom: 4,
-        }}
-        numberOfLines={2}
-      >
-        {facility.name}
-      </Text>
-
-      {/* Facility Address + Distance */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginTop: 2,
-        }}
-      >
-        <Text
-          style={{
-            color: Colors.espressoMuted,
-            fontSize: 12,
-            lineHeight: 16,
-            flex: 1,
-            marginRight: 8,
-          }}
-          numberOfLines={1}
-        >
-          {facility.address}
+        <Text numberOfLines={2} className="text-lg font-bold leading-6 text-ink">
+          {facility.name}
         </Text>
-        {facility.distance_meters !== undefined && (
-          <Text
-            style={{
-              color: Colors.espressoFaint,
-              fontSize: 11,
-              fontWeight: "600",
-              flexShrink: 0,
-            }}
-          >
-            {(facility.distance_meters / 1000).toFixed(1)} km
+
+        <View className="flex-row items-center gap-3">
+          <Text numberOfLines={1} className="min-w-0 flex-1 text-sm text-ink-muted">
+            {facility.address || "Address not listed"}
           </Text>
-        )}
+          {distance ? <Text className="shrink-0 text-sm font-semibold text-ink">{distance}</Text> : null}
+        </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
+  );
+}
+
+export function FacilityCardSkeleton() {
+  return (
+    <View className="overflow-hidden rounded-2xl border border-line bg-sand">
+      <Skeleton square className="h-36 w-full" />
+      <View className="gap-3 p-4">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-5 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+      </View>
+    </View>
   );
 }

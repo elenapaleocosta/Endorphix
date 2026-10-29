@@ -1,279 +1,153 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, useWindowDimensions, Platform } from "react-native";
-import Svg, {
-  Path,
-  Circle,
-  Line,
-  Text as SvgText,
-} from "react-native-svg";
+import { useMemo, useState, Fragment } from "react";
+import { Text, View } from "react-native";
+import Svg, { Circle, Line, Path, Text as SvgText } from "react-native-svg";
 import { Colors } from "@/constants";
+import { energyBand } from "@/utils";
+import { Card, EmptyState, ErrorState, Eyebrow, Skeleton } from "@/components/ui";
 import type { EnergyWaveDataPoint } from "@/types";
 
-const CHART_HEIGHT = 160;
-const PADDING_TOP = 20;
-const PADDING_BOTTOM = 30;
-const PADDING_HORIZONTAL = 24;
+const HEIGHT = 160;
+const PAD_TOP = 22;
+const PAD_BOTTOM = 26;
+const PAD_X = 24;
+const MIN_LABEL_SPACING = 56;
 
-interface EnergyWaveChartProps {
-  data: EnergyWaveDataPoint[];
-  activeStreak?: number;
+interface Point {
+  x: number;
+  y: number;
+  score: number;
+  label: string;
 }
 
-export function EnergyWaveChart({ data, activeStreak = 7 }: EnergyWaveChartProps) {
-  const { width: windowWidth } = useWindowDimensions();
-  const [containerWidth, setContainerWidth] = useState<number>(0);
+function buildGeometry(data: EnergyWaveDataPoint[], width: number) {
+  const usableW = width - PAD_X * 2;
+  const usableH = HEIGHT - PAD_TOP - PAD_BOTTOM;
+  const yFor = (score: number) => PAD_TOP + (1 - score / 100) * usableH;
 
-  // Dynamic width that adapts to exact layout or window
-  const effectiveWidth = Math.max(containerWidth > 0 ? containerWidth - 32 : windowWidth - 64, 280);
+  const points: Point[] = data.map((d, i) => ({
+    x: data.length === 1 ? width / 2 : PAD_X + (i / (data.length - 1)) * usableW,
+    y: yFor(d.score),
+    score: d.score,
+    label: d.dayLabel,
+  }));
 
-  if (!data || data.length === 0) {
+  // Cubic bézier spline with control offset (x[i+1] − x[i]) / 2.5.
+  let line = "";
+  if (points.length > 1) {
+    line = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i];
+      const b = points[i + 1];
+      const dx = (b.x - a.x) / 2.5;
+      line += ` C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
+    }
+  }
+  const baseline = HEIGHT - PAD_BOTTOM;
+  const area = line ? `${line} L ${points[points.length - 1].x} ${baseline} L ${points[0].x} ${baseline} Z` : "";
+
+  const peak = points.reduce((max, p) => (p.score > max.score ? p : max), points[0]);
+  const labelEvery = Math.max(1, Math.ceil(points.length / Math.max(1, Math.floor(width / MIN_LABEL_SPACING))));
+
+  return { points, line, area, peak, labelEvery, gridY: [25, 50, 75].map(yFor) };
+}
+
+interface EnergyWaveChartProps {
+  data: EnergyWaveDataPoint[] | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+  onLogFirst: () => void;
+}
+
+export function EnergyWaveChart({ data, isLoading, isError, onRetry, onLogFirst }: EnergyWaveChartProps) {
+  const [width, setWidth] = useState(0);
+  const points = useMemo(() => data ?? [], [data]);
+  const geometry = useMemo(() => (width > 0 && points.length ? buildGeometry(points, width) : null), [points, width]);
+
+  if (isLoading) return <Skeleton square className="h-64 w-full rounded-2xl" />;
+  if (isError) return <ErrorState title="Couldn't load your energy wave" onRetry={onRetry} />;
+  if (!points.length) {
     return (
-      <View
-        style={{
-          height: CHART_HEIGHT,
-          backgroundColor: Colors.sand,
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: Colors.sandDark,
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 20,
-        }}
-      >
-        <Text style={{ color: Colors.espressoMuted, fontSize: 13, fontWeight: "600" }}>
-          Begin your daily movement to generate your first endorphin wave.
-        </Text>
-      </View>
+      <EmptyState
+        icon="pulse-outline"
+        title="No energy logged in the last 30 days"
+        message="Log how you feel after a session to start your wave."
+        actionLabel="Log a session"
+        onAction={onLogFirst}
+      />
     );
   }
 
-  // Calculate coordinates for SVG curve dynamically based on effectiveWidth
-  const { pathD, fillD, points, peakPoint, averageScore } = useMemo(() => {
-    const usableW = Math.max(effectiveWidth - PADDING_HORIZONTAL * 2, 200);
-    const usableH = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
-
-    const pts = data.map((d, index) => {
-      const x =
-        PADDING_HORIZONTAL +
-        (index / Math.max(data.length - 1, 1)) * usableW;
-      const normalizedY = (d.score - 0) / 100;
-      const y = PADDING_TOP + (1 - normalizedY) * usableH;
-      return { x, y, score: d.score, label: d.dayLabel || `D${index + 1}` };
-    });
-
-    // Compute smooth cubic bezier path
-    let curveD = "";
-    if (pts.length === 1) {
-      curveD = `M ${pts[0].x - 20} ${pts[0].y} L ${pts[0].x + 20} ${pts[0].y}`;
-    } else {
-      curveD = `M ${pts[0].x} ${pts[0].y}`;
-      for (let i = 0; i < pts.length - 1; i++) {
-        const curr = pts[i];
-        const next = pts[i + 1];
-        const cpX1 = curr.x + (next.x - curr.x) / 2.5;
-        const cpY1 = curr.y;
-        const cpX2 = next.x - (next.x - curr.x) / 2.5;
-        const cpY2 = next.y;
-        curveD += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${next.x} ${next.y}`;
-      }
-    }
-
-    const lastX = pts[pts.length - 1].x;
-    const firstX = pts[0].x;
-    const bottomY = CHART_HEIGHT - PADDING_BOTTOM;
-    const areaD = `${curveD} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
-
-    const peak = pts.reduce((max, p) => (p.score > max.score ? p : max), pts[0]);
-    const avg = Math.round(
-      data.reduce((sum, item) => sum + item.score, 0) / Math.max(data.length, 1)
-    );
-
-    return { pathD: curveD, fillD: areaD, points: pts, peakPoint: peak, averageScore: avg };
-  }, [data, effectiveWidth]);
+  const average = Math.round(points.reduce((sum, p) => sum + p.score, 0) / points.length);
+  const band = energyBand(average);
 
   return (
-    <View
-      onLayout={(e) => {
-        const layoutW = e.nativeEvent.layout.width;
-        if (layoutW && layoutW > 0 && Math.abs(layoutW - containerWidth) > 2) {
-          setContainerWidth(layoutW);
-        }
-      }}
-      style={{
-        backgroundColor: Colors.sand,
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: Colors.sandDark,
-        padding: 16,
-        overflow: "hidden",
-        width: "100%",
-      }}
-    >
-      {/* Top Header Row with Streak & Metric Pill */}
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 10,
-        }}
-      >
-        <View>
-          <Text
-            style={{
-              color: Colors.espressoFaint,
-              fontSize: 10,
-              fontWeight: "800",
-              letterSpacing: 2,
-            }}
-          >
-            ENDORPHIN HIGH WAVE
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 2 }}>
-            <Text
-              style={{
-                color: Colors.espresso,
-                fontSize: 22,
-                fontWeight: "800",
-                letterSpacing: -0.5,
-              }}
-            >
-              {averageScore}
-            </Text>
-            <Text style={{ color: Colors.espressoMuted, fontSize: 11, fontWeight: "600" }}>
-              / 100 AVG SOMATIC INDEX
-            </Text>
-          </View>
-        </View>
-
-        {/* Active Streak Badge */}
-        <View
-          style={{
-            backgroundColor: Colors.olive,
-            paddingHorizontal: 10,
-            paddingVertical: 5,
-            borderRadius: 8,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 4,
-          }}
-        >
-          <Text style={{ color: Colors.chalk, fontSize: 11, fontWeight: "800", letterSpacing: 0.8 }}>
-            ✦ {activeStreak}-DAY STREAK
-          </Text>
+    <Card>
+      <Eyebrow>Endorphin wave · 30 days</Eyebrow>
+      <View className="mt-1 flex-row flex-wrap items-baseline gap-x-2">
+        <Text className="text-3xl font-extrabold text-ink">{average}</Text>
+        <Text className="text-sm text-ink-muted">average</Text>
+        <View className="flex-row items-center gap-1.5">
+          <View className="h-2 w-2 rounded-full" style={{ backgroundColor: band.color }} />
+          <Text className="text-sm font-semibold text-ink">{band.label}</Text>
         </View>
       </View>
 
-      {/* SVG Mathematical Curve with Precision Somatic Cursor */}
       <View
-        className="cursor-energy-wave"
-        style={[
-          { alignSelf: "center", width: effectiveWidth },
-          Platform.OS === "web" && ({
-            cursor: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='4.5' stroke='%235A6738' stroke-width='1.5' fill='%235A6738' fill-opacity='0.18'/%3E%3Cline x1='12' y1='2' x2='12' y2='6' stroke='%235A6738' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='12' y1='18' x2='12' y2='22' stroke='%235A6738' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='2' y1='12' x2='6' y2='12' stroke='%235A6738' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='18' y1='12' x2='22' y2='12' stroke='%235A6738' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, crosshair`,
-          } as any),
-        ]}
+        className="mt-3"
+        onLayout={(e) => setWidth(Math.round(e.nativeEvent.layout.width))}
+        accessible
+        accessibilityRole="image"
+        accessibilityLabel={`Energy wave of ${points.length} sessions. Average ${average}, peak ${Math.max(
+          ...points.map((p) => p.score),
+        )} out of 100.`}
       >
-        <Svg width={effectiveWidth} height={CHART_HEIGHT}>
-          {/* Reference Level Grid Lines (25, 50, 75) */}
-          {[25, 50, 75].map((lvl) => {
-            const usableH = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
-            const y = PADDING_TOP + (1 - lvl / 100) * usableH;
-            return (
-              <Line
-                key={lvl}
-                x1={PADDING_HORIZONTAL}
-                y1={y}
-                x2={effectiveWidth - PADDING_HORIZONTAL}
-                y2={y}
-                stroke={Colors.sandDark}
-                strokeWidth={1}
-                strokeDasharray="4, 4"
-              />
-            );
-          })}
-
-          {/* Shaded Area Fill - Matte tint */}
-          <Path d={fillD} fill={Colors.olive + "15"} />
-
-          {/* Smooth Undulating Bezier Wave Stroke - Solid Matte */}
-          <Path
-            d={pathD}
-            fill="none"
-            stroke={Colors.olive}
-            strokeWidth={2.5}
-            strokeLinecap="round"
-          />
-
-          {/* Data Markers */}
-          {points.map((p, idx) => {
-            const isPeak = p === peakPoint;
-            const isLatest = idx === points.length - 1;
-            const pointColor = isPeak ? Colors.terracotta : isLatest ? Colors.olive : Colors.espresso;
-
-            return (
-              <React.Fragment key={idx}>
-                <Circle
-                  cx={p.x}
-                  cy={p.y}
-                  r={isPeak ? 5.5 : 3.5}
-                  fill={pointColor}
-                  stroke={Colors.chalk}
-                  strokeWidth={isPeak ? 2 : 1.5}
-                />
-                {/* Day Labels below chart */}
-                <SvgText
-                  x={p.x}
-                  y={CHART_HEIGHT - 8}
-                  fontSize={9}
-                  fontWeight="700"
-                  fill={isLatest ? Colors.olive : Colors.espressoMuted}
-                  textAnchor="middle"
-                >
-                  {p.label}
-                </SvgText>
-              </React.Fragment>
-            );
-          })}
-
-          {/* Peak Score Indicator Pill */}
-          {peakPoint && (
+        {geometry ? (
+          <Svg width={width} height={HEIGHT}>
+            {geometry.gridY.map((y) => (
+              <Line key={y} x1={PAD_X} x2={width - PAD_X} y1={y} y2={y} stroke={Colors.line} strokeDasharray="4 4" />
+            ))}
+            {geometry.area ? <Path d={geometry.area} fill={Colors.olive} fillOpacity={0.1} /> : null}
+            {geometry.line ? (
+              <Path d={geometry.line} fill="none" stroke={Colors.olive} strokeWidth={2.5} strokeLinecap="round" />
+            ) : null}
+            {geometry.points.map((p, i) => {
+              const isPeak = p === geometry.peak;
+              const isLast = i === geometry.points.length - 1;
+              const showLabel = isLast || i % geometry.labelEvery === 0;
+              return (
+                <Fragment key={`${p.label}-${i}`}>
+                  <Circle
+                    cx={p.x}
+                    cy={p.y}
+                    r={isPeak ? 5 : 3.5}
+                    fill={isPeak ? Colors.terracotta : Colors.olive}
+                    stroke={Colors.sand}
+                    strokeWidth={1.5}
+                  />
+                  {showLabel ? (
+                    <SvgText x={p.x} y={HEIGHT - 6} fontSize={11} fill={Colors.inkMuted} textAnchor="middle">
+                      {p.label}
+                    </SvgText>
+                  ) : null}
+                </Fragment>
+              );
+            })}
             <SvgText
-              x={peakPoint.x}
-              y={Math.max(peakPoint.y - 9, 14)}
-              fontSize={10}
-              fontWeight="800"
+              x={geometry.peak.x}
+              y={Math.max(geometry.peak.y - 10, 12)}
+              fontSize={11}
+              fontWeight="700"
               fill={Colors.terracotta}
               textAnchor="middle"
             >
-              {peakPoint.score} PEAK
+              {`Peak ${geometry.peak.score}`}
             </SvgText>
-          )}
-        </Svg>
+          </Svg>
+        ) : (
+          <View style={{ height: HEIGHT }} />
+        )}
       </View>
-
-      {/* Footer State Classification */}
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          borderTopWidth: 1,
-          borderTopColor: Colors.sandDark,
-          paddingTop: 10,
-          marginTop: 4,
-        }}
-      >
-        <Text style={{ color: Colors.espressoMuted, fontSize: 11, fontWeight: "600" }}>
-          Current State:{" "}
-          <Text style={{ color: Colors.olive, fontWeight: "800" }}>
-            {averageScore >= 85 ? "Peak Vitality High" : averageScore >= 70 ? "Active Flow State" : "Grounded"}
-          </Text>
-        </Text>
-        <Text style={{ color: Colors.camel, fontSize: 11, fontWeight: "700" }}>
-          Consecutive Flow
-        </Text>
-      </View>
-    </View>
+    </Card>
   );
 }

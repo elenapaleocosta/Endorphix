@@ -1,145 +1,77 @@
-import { Tabs } from "expo-router";
-import { View, Text, Platform } from "react-native";
+import { type ComponentProps } from "react";
+import { ActivityIndicator, View, useWindowDimensions } from "react-native";
+import { Redirect, Tabs } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants";
-import { useHaptics } from "@/hooks/useHaptics";
-import { useLocation } from "@/hooks/useLocation";
-import { useResponsive } from "@/hooks/useResponsive";
+import { haptics } from "@/lib/haptics";
+import { useDeviceLocation } from "@/hooks/useLocation";
+import { useAuthStore } from "@/store/auth.store";
+import { TAB_BAR_HEIGHT, WIDE_BREAKPOINT } from "@/components/ui";
 
-// ─── Custom Tab Icon ──────────────────────────────────────────────────────────
+type IconName = ComponentProps<typeof Ionicons>["name"];
 
-function TabIcon({
-  label,
-  symbol,
-  focused,
-  activeColor = Colors.olive,
-}: {
-  label: string;
-  symbol: string;
-  focused: boolean;
-  activeColor?: string;
-}) {
-  return (
-    <View
-      style={{
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 3,
-        paddingTop: 6,
-      }}
-    >
-      <Text
-        style={{
-          fontSize: 18,
-          color: focused ? activeColor : Colors.espressoMuted,
-          opacity: focused ? 1 : 0.65,
-        }}
-      >
-        {symbol}
-      </Text>
-      <Text
-        style={{
-          fontSize: 10,
-          fontWeight: "800",
-          letterSpacing: 1.5,
-          color: focused ? activeColor : Colors.espressoMuted,
-        }}
-      >
-        {label}
-      </Text>
-    </View>
+const tabIcon =
+  (active: IconName, inactive: IconName) =>
+  ({ color, focused }: { color: string; focused: boolean }) => (
+    <Ionicons name={focused ? active : inactive} size={22} color={color} />
   );
-}
-
-// ─── Tabs Layout (Streamlined: Discover · Spark · Passport) ───────────────────
 
 export default function TabsLayout() {
-  const { tap } = useHaptics();
-  const { isWide, width } = useResponsive();
+  useDeviceLocation();
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const signedIn = useAuthStore((s) => s.user !== null);
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
 
-  // Watch location coordinates at root tab level
-  useLocation();
+  if (!hydrated) {
+    return (
+      <View className="flex-1 items-center justify-center bg-chalk">
+        <ActivityIndicator color={Colors.olive} size="large" accessibilityLabel="Loading" />
+      </View>
+    );
+  }
+  if (!signedIn) return <Redirect href="/(auth)/sign-in" />;
 
-  const tabWidth = Math.min(width - 32, 600);
+  const wide = width >= WIDE_BREAKPOINT;
+  const capsuleWidth = Math.min(width - 32, 480);
 
   return (
     <Tabs
+      screenListeners={{ tabPress: () => haptics.selection() }}
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: Colors.chalk,
-          borderTopColor: Colors.sandDark,
-          borderTopWidth: 1,
-          height: Platform.OS === "ios" ? 88 : isWide ? 74 : 70,
-          paddingTop: 6,
-          paddingBottom: Platform.OS === "ios" ? 28 : isWide ? 10 : 12,
-          ...(isWide
-            ? {
-                position: "absolute",
-                bottom: 16,
-                left: Math.max(0, (width - tabWidth) / 2),
-                width: tabWidth,
-                borderRadius: 24,
-                borderWidth: 1,
-                borderColor: Colors.sandDark,
-                shadowColor: "#2B1F17",
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.12,
-                shadowRadius: 16,
-                elevation: 8,
-              }
-            : {}),
-        },
         tabBarActiveTintColor: Colors.olive,
-        tabBarInactiveTintColor: Colors.espressoMuted,
-        tabBarShowLabel: false,
+        tabBarInactiveTintColor: Colors.inkMuted,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "700" },
+        tabBarStyle: wide
+          ? {
+              position: "absolute",
+              bottom: 16 + insets.bottom,
+              left: (width - capsuleWidth) / 2,
+              width: capsuleWidth,
+              height: TAB_BAR_HEIGHT,
+              paddingTop: 8,
+              paddingBottom: 8,
+              borderRadius: 24,
+              borderWidth: 1,
+              borderColor: Colors.line,
+              backgroundColor: Colors.chalk,
+            }
+          : {
+              height: TAB_BAR_HEIGHT + insets.bottom,
+              paddingTop: 8,
+              paddingBottom: insets.bottom + 8,
+              borderTopColor: Colors.line,
+              backgroundColor: Colors.chalk,
+            },
       }}
     >
-      <Tabs.Screen
-        name="discover"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              label="DISCOVER"
-              symbol="◎"
-              focused={focused}
-              activeColor={Colors.olive}
-            />
-          ),
-          tabBarAccessibilityLabel: "Discover Facilities",
-        }}
-        listeners={{ tabPress: () => tap() }}
-      />
-
-      <Tabs.Screen
-        name="spark"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              label="SPARK"
-              symbol="⚡"
-              focused={focused}
-              activeColor={Colors.terracotta}
-            />
-          ),
-          tabBarAccessibilityLabel: "Spark Surprise Me",
-        }}
-        listeners={{ tabPress: () => tap() }}
-      />
-
+      <Tabs.Screen name="discover" options={{ title: "Discover", tabBarIcon: tabIcon("compass", "compass-outline") }} />
+      <Tabs.Screen name="spark" options={{ title: "Spark", tabBarIcon: tabIcon("flash", "flash-outline") }} />
       <Tabs.Screen
         name="profile"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              label="PASSPORT"
-              symbol="◉"
-              focused={focused}
-              activeColor={Colors.navy}
-            />
-          ),
-          tabBarAccessibilityLabel: "Vitality Passport Profile",
-        }}
-        listeners={{ tabPress: () => tap() }}
+        options={{ title: "Passport", tabBarIcon: tabIcon("person-circle", "person-circle-outline") }}
       />
     </Tabs>
   );

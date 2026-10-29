@@ -1,166 +1,152 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import type { Facility, SportCategory, GeoPoint, MacroRealm } from "@/types";
 import { MAX_RADIUS_KM, SPARK_MIN_RATING } from "@/constants";
 import {
-  queryOsmOverpassFacilities,
   getFilteredCuratedFacilities,
-  CURATED_HERITAGE_FACILITIES,
-  calculateHaversineDistance,
+  getKnownFacility,
+  queryOsmOverpassFacilities,
+  rememberFacilities,
 } from "@/lib/geo-services";
+import type { Facility, GeoPoint, MacroRealm, SportCategory } from "@/types";
 
-// ─── Query Keys ───────────────────────────────────────────────────────────────
+type FacilityFilter = SportCategory | MacroRealm;
+
+/** ~1 km precision so small GPS drift doesn't refetch the whole list. */
+const coarse = (point: GeoPoint) => [Number(point.latitude.toFixed(2)), Number(point.longitude.toFixed(2))] as const;
 
 export const facilityKeys = {
   all: ["facilities"] as const,
-  nearby: (location: GeoPoint, filter?: SportCategory | MacroRealm, radiusKm?: number) =>
-    [...facilityKeys.all, "nearby", location, filter, radiusKm] as const,
-  spark: (location: GeoPoint) =>
-    [...facilityKeys.all, "spark", location] as const,
+  nearby: (location: GeoPoint, filter: FacilityFilter | undefined, radiusKm: number) =>
+    [...facilityKeys.all, "nearby", ...coarse(location), filter ?? "all", radiusKm] as const,
+  spark: (location: GeoPoint) => [...facilityKeys.all, "spark", ...coarse(location)] as const,
   detail: (id: string) => [...facilityKeys.all, "detail", id] as const,
 };
 
-// ─── Fetch Nearby Facilities (Dual-Path & Live Data) ──────────────────────────
+/** Returns RPC rows, or null so the caller can fail over to OpenStreetMap / curated data. */
+async function tryRpc(call: () => PromiseLike<{ data: any[] | null; error: unknown }>): Promise<any[] | null> {
+  try {
+    const { data, error } = await call();
+    return !error && data?.length ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+function mapRpcRows(rows: any[], origin: GeoPoint): Facility[] {
+  return rows.map((row) => ({
+    ...row,
+    location: { latitude: row.lat ?? origin.latitude, longitude: row.lng ?? origin.longitude },
+    images: row.images ?? [],
+    timetable: row.timetable ?? {},
+    verified_source: "postgis" as const,
+  }));
+}
 
 async function fetchNearbyFacilities(
   location: GeoPoint,
-  filter?: SportCategory | MacroRealm,
-  radiusKm: number = MAX_RADIUS_KM
+  filter: FacilityFilter | undefined,
+  radiusKm: number,
 ): Promise<Facility[]> {
   const radiusMeters = Math.min(radiusKm, MAX_RADIUS_KM) * 1000;
 
   if (isSupabaseConfigured) {
-    try {
-      const isMacro = filter === "water" || filter === "land" || filter === "mountain";
-      const { data, error } = await supabase.rpc("facilities_within_radius", {
+    const isRealm = filter === "water" || filter === "land" || filter === "mountain";
+    const rows = await tryRpc(() =>
+      supabase.rpc("facilities_within_radius", {
         lat: location.latitude,
         lng: location.longitude,
         radius_meters: radiusMeters,
-        sport_filter: isMacro ? null : (filter as string) ?? null,
-      });
-
-      if (!error && data && data.length > 0) {
-        return (data as any[]).map((row) => ({
-          ...row,
-          location: {
-            latitude: row.lat ?? location.latitude,
-            longitude: row.lng ?? location.longitude,
-          },
-          images: row.images ?? [],
-          timetable: row.timetable ?? {},
-          verified_source: "postgis" as const,
-        }));
-      }
-    } catch {
-      // Fallback to OSM / Curated
-    }
+        sport_filter: isRealm ? null : filter ?? null,
+      }),
+    );
+    if (rows) return rememberFacilities(mapRpcRows(rows, location));
   }
 
-  // Live query via OpenStreetMap Overpass with curated high-end fallback
   return queryOsmOverpassFacilities(location, radiusMeters, filter);
 }
 
-// ─── Fetch Spark Facilities (Surprise Me: rating >= 4.5, random order) ────────
-
+/** Top-rated venues within range, shuffled once per fetch so each "roll" is a surprise. */
 async function fetchSparkFacilities(location: GeoPoint): Promise<Facility[]> {
   if (isSupabaseConfigured) {
-    try {
-      const { data, error } = await supabase.rpc("spark_facilities", {
+    const rows = await tryRpc(() =>
+      supabase.rpc("spark_facilities", {
         lat: location.latitude,
         lng: location.longitude,
         radius_meters: MAX_RADIUS_KM * 1000,
         min_rating: SPARK_MIN_RATING,
-      });
-
-      if (!error && data && data.length > 0) {
-        return (data as any[]).map((row) => ({
-          ...row,
-          location: {
-            latitude: row.lat ?? location.latitude,
-            longitude: row.lng ?? location.longitude,
-          },
-          images: row.images ?? [],
-          timetable: row.timetable ?? {},
-          verified_source: "postgis" as const,
-        }));
-      }
-    } catch {
-      // Fall through to curated fallback
-    }
+      }),
+    );
+    if (rows) return rememberFacilities(mapRpcRows(rows, location));
   }
 
-  // Top rated facilities shuffled for spontaneous surprise
-  const highRated = getFilteredCuratedFacilities(location, MAX_RADIUS_KM * 1000).filter(
-    (f) => f.rating >= SPARK_MIN_RATING
+  const candidates = getFilteredCuratedFacilities(location, MAX_RADIUS_KM * 1000).filter(
+    (f) => f.review_count > 0 && f.rating >= SPARK_MIN_RATING,
   );
-
-  return [...highRated].sort(() => 0.5 - Math.random());
+  return shuffle(candidates);
 }
 
-// ─── Fetch Facility Detail ─────────────────────────────────────────────────────
+export class FacilityNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Facility ${id} not found`);
+    this.name = "FacilityNotFoundError";
+  }
+}
 
 async function fetchFacilityDetail(id: string): Promise<Facility> {
-  // Check curated heritage list first
-  const foundCurated = CURATED_HERITAGE_FACILITIES.find((f) => f.id === id);
-  if (foundCurated) return foundCurated;
+  const known = getKnownFacility(id);
+  if (known) return known;
 
   if (isSupabaseConfigured) {
-    try {
-      const { data, error } = await supabase
-        .from("facilities")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (!error && data) {
-        return {
-          ...data,
-          location: { latitude: 37.8642, longitude: 23.7538 },
-          images: data.images ?? [],
-          timetable: data.timetable ?? {},
-        } as unknown as Facility;
-      }
-    } catch {
-      // Fall through
+    const { data, error } = await supabase.from("facilities").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    if (data) {
+      return {
+        ...data,
+        location: { latitude: (data as any).lat, longitude: (data as any).lng },
+        images: data.images ?? [],
+        timetable: data.timetable ?? {},
+      } as unknown as Facility;
     }
   }
 
-  // Fallback to first curated facility if not found
-  return CURATED_HERITAGE_FACILITIES[0];
+  throw new FacilityNotFoundError(id);
 }
 
-// ─── React Query Hooks ─────────────────────────────────────────────────────────
+function shuffle<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
 
-export function useNearbyFacilities(
-  location: GeoPoint | null,
-  filter?: SportCategory | MacroRealm,
-  radiusKm?: number
-) {
-  const fallbackLocation: GeoPoint = location || { latitude: 37.8642, longitude: 23.7538 };
-
+export function useNearbyFacilities(location: GeoPoint | null, filter: FacilityFilter | undefined, radiusKm: number) {
   return useQuery({
-    queryKey: facilityKeys.nearby(fallbackLocation, filter, radiusKm),
-    queryFn: () => fetchNearbyFacilities(fallbackLocation, filter, radiusKm),
-    staleTime: 1000 * 60 * 5,
+    queryKey: location ? facilityKeys.nearby(location, filter, radiusKm) : facilityKeys.all,
+    queryFn: () => fetchNearbyFacilities(location!, filter, radiusKm),
+    enabled: location !== null,
+    staleTime: 5 * 60_000,
     retry: false,
   });
 }
 
 export function useSparkFacilities(location: GeoPoint | null) {
-  const fallbackLocation: GeoPoint = location || { latitude: 37.8642, longitude: 23.7538 };
-
   return useQuery({
-    queryKey: facilityKeys.spark(fallbackLocation),
-    queryFn: () => fetchSparkFacilities(fallbackLocation),
-    staleTime: 1000 * 60 * 2,
+    queryKey: location ? facilityKeys.spark(location) : facilityKeys.all,
+    queryFn: () => fetchSparkFacilities(location!),
+    enabled: location !== null,
+    staleTime: 2 * 60_000,
     retry: false,
   });
 }
 
-export function useFacilityDetail(id: string) {
+export function useFacilityDetail(id: string | undefined) {
   return useQuery({
-    queryKey: facilityKeys.detail(id),
-    queryFn: () => fetchFacilityDetail(id),
-    staleTime: 1000 * 60 * 10,
+    queryKey: facilityKeys.detail(id ?? ""),
+    queryFn: () => fetchFacilityDetail(id!),
+    enabled: Boolean(id),
+    staleTime: 10 * 60_000,
+    retry: (count, error) => !(error instanceof FacilityNotFoundError) && count < 2,
   });
 }

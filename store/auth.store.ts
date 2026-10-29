@@ -1,13 +1,9 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { User } from "@/types";
 
-const STORAGE_KEY_AUTH = "endorphix_auth_user";
-
-export const DEFAULT_AVATAR =
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80";
-
-const DEFAULT_ATHLETE: User = {
+export const DEMO_ATHLETE: User = {
   id: "athlete-julian",
   email: "julian@endorphix.app",
   username: "julian_sterling",
@@ -15,95 +11,75 @@ const DEFAULT_ATHLETE: User = {
   last_name: "Sterling",
   nickname: "The Cadence",
   display_name: "Julian Sterling",
-  bio: "Country club tennis competitor & high-cadence endurance cyclist. Channeling daily endorphins within 50km.",
-  avatar_url: DEFAULT_AVATAR,
+  bio: "Country club tennis competitor and high-cadence endurance cyclist.",
   streak_current: 9,
   streak_longest: 24,
   lifetime_sessions: 48,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
 };
 
 export interface NotificationPreferences {
+  activityAlerts: boolean;
   pushNotifications: boolean;
   emailUpdates: boolean;
-  activityAlerts: boolean;
   marketingMessages: boolean;
 }
 
-export interface PrivacyPreferences {
-  profileVisibility: "public" | "private";
-}
+export type ProfileVisibility = "public" | "private";
+
+const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
+  activityAlerts: true,
+  pushNotifications: true,
+  emailUpdates: false,
+  marketingMessages: false,
+};
 
 interface AuthState {
   user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
   notifications: NotificationPreferences;
-  privacy: PrivacyPreferences;
+  profileVisibility: ProfileVisibility;
+  /** True once persisted state has been read from storage. */
+  hydrated: boolean;
+  markHydrated: () => void;
   setUser: (user: User | null) => void;
   updateUserProfile: (updates: Partial<User>) => void;
-  setNotifications: (prefs: Partial<NotificationPreferences>) => void;
-  setPrivacy: (prefs: Partial<PrivacyPreferences>) => void;
-  setLoading: (loading: boolean) => void;
+  setNotification: (key: keyof NotificationPreferences, value: boolean) => void;
+  setProfileVisibility: (visibility: ProfileVisibility) => void;
   signOut: () => void;
-  deleteAccount: () => void;
+  /** Signs out and restores every preference to its default. */
+  eraseAll: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: DEFAULT_ATHLETE,
-  isAuthenticated: true,
-  isLoading: false,
-  notifications: {
-    pushNotifications: true,
-    emailUpdates: false,
-    activityAlerts: true,
-    marketingMessages: false,
-  },
-  privacy: {
-    profileVisibility: "public",
-  },
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      notifications: DEFAULT_NOTIFICATIONS,
+      profileVisibility: "public",
+      hydrated: false,
+      markHydrated: () => set({ hydrated: true }),
 
-  setUser: (user) => {
-    if (user) {
-      AsyncStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(user)).catch(() => {});
-    } else {
-      AsyncStorage.removeItem(STORAGE_KEY_AUTH).catch(() => {});
-    }
-    set({ user, isAuthenticated: !!user, isLoading: false });
-  },
+      setUser: (user) => set({ user }),
 
-  updateUserProfile: (updates) =>
-    set((state) => {
-      if (!state.user) return state;
-      const updated: User = {
-        ...state.user,
-        ...updates,
-        updated_at: new Date().toISOString(),
-      };
-      AsyncStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(updated)).catch(() => {});
-      return { user: updated };
+      updateUserProfile: (updates) =>
+        set((state) =>
+          state.user ? { user: { ...state.user, ...updates, updated_at: new Date().toISOString() } } : state,
+        ),
+
+      setNotification: (key, value) =>
+        set((state) => ({ notifications: { ...state.notifications, [key]: value } })),
+
+      setProfileVisibility: (profileVisibility) => set({ profileVisibility }),
+
+      signOut: () => set({ user: null }),
+      eraseAll: () => set({ user: null, notifications: DEFAULT_NOTIFICATIONS, profileVisibility: "public" }),
     }),
-
-  setNotifications: (prefs) =>
-    set((state) => ({
-      notifications: { ...state.notifications, ...prefs },
-    })),
-
-  setPrivacy: (prefs) =>
-    set((state) => ({
-      privacy: { ...state.privacy, ...prefs },
-    })),
-
-  setLoading: (isLoading) => set({ isLoading }),
-
-  signOut: () => {
-    AsyncStorage.removeItem(STORAGE_KEY_AUTH).catch(() => {});
-    set({ user: null, isAuthenticated: false });
-  },
-
-  deleteAccount: () => {
-    AsyncStorage.removeItem(STORAGE_KEY_AUTH).catch(() => {});
-    set({ user: null, isAuthenticated: false });
-  },
-}));
+    {
+      name: "endorphix-auth",
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: ({ user, notifications, profileVisibility }) => ({ user, notifications, profileVisibility }),
+      onRehydrateStorage: () => (state) => state?.markHydrated(),
+    },
+  ),
+);

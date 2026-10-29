@@ -63,38 +63,6 @@ export type SportCategory =
   | "sailing"
   | "other";
 
-export interface MacroRealmDefinition {
-  id: MacroRealm;
-  label: "Water" | "Land" | "Mountain";
-  tagline: string;
-  accent: string;
-  sports: SportCategory[];
-}
-
-export const MACRO_REALMS: MacroRealmDefinition[] = [
-  {
-    id: "water",
-    label: "Water",
-    tagline: "Hydrodynamic conditioning & open-water vitality",
-    accent: "#A7744B",
-    sports: ["swimming", "rowing", "surfing", "sailing"],
-  },
-  {
-    id: "land",
-    label: "Land",
-    tagline: "High-cadence running, tennis clubs & kinetic mastery",
-    accent: "#5A6738",
-    sports: ["tennis", "running", "cycling", "gym", "crossfit", "padel", "yoga", "football", "basketball", "volleyball", "pilates", "boxing", "martial_arts"],
-  },
-  {
-    id: "mountain",
-    label: "Mountain",
-    tagline: "Vertical ascent, alpine endurance & trail velocity",
-    accent: "#6F2E1B",
-    sports: ["trail_running", "climbing", "hiking"],
-  },
-];
-
 export interface FacilityTimetable {
   monday?: { open: string; close: string } | null;
   tuesday?: { open: string; close: string } | null;
@@ -167,10 +135,10 @@ export interface Booking {
   activity_type: ActivityType;
   sport_category?: SportCategory;
   court_or_slot: string;
+  /** ISO calendar date (YYYY-MM-DD) of the session. */
   date: string;
   start_time: string;
   end_time: string;
-  notification_scheduled_time: string;
   status: BookingStatus;
   logged_energy_score?: number;
   created_at: string;

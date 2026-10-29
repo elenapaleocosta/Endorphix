@@ -1,806 +1,317 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  Platform,
-} from "react-native";
+import { Children, useState, type ReactNode } from "react";
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
-import { MotiView } from "moti";
-import { useLocationStore } from "@/store/location.store";
-import { useDiscoverStore } from "@/store/discover.store";
-import { useBookingStore } from "@/store/booking.store";
-import { useNearbyFacilities } from "@/hooks/useFacilities";
-import { useHaptics } from "@/hooks/useHaptics";
-import { FacilityCard } from "@/components/FacilityCard";
-import { SearchModeToggle } from "@/components/SearchModeToggle";
-import { SportAthleticStats } from "@/components/SportAthleticStats";
-import { ResponsiveContainer } from "@/components/ResponsiveContainer";
-import { useResponsive } from "@/hooks/useResponsive";
-import { Colors, Spacing, MAX_RADIUS_KM } from "@/constants";
-import { MACRO_REALMS, type SportCategory, type MacroRealm, type TourPlan } from "@/types";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useShallow } from "zustand/react/shallow";
+import {
+  Colors,
+  FALLBACK_LOCATION_LABEL,
+  MACRO_REALMS,
+  MAX_RADIUS_KM,
+  RADIUS_OPTIONS_KM,
+  SPORTS,
+} from "@/constants";
 import { generateDestinationActionPackages } from "@/lib/geo-services";
+import { haptics } from "@/lib/haptics";
+import { useNearbyFacilities } from "@/hooks/useFacilities";
+import { useDiscoverStore } from "@/store/discover.store";
+import { useLocationStore } from "@/store/location.store";
+import { FacilityCard, FacilityCardSkeleton } from "@/components/FacilityCard";
+import {
+  Button,
+  Card,
+  Chip,
+  EmptyState,
+  ErrorState,
+  Eyebrow,
+  PageHeader,
+  Screen,
+  SectionHeader,
+  SegmentedControl,
+  Tag,
+  TextField,
+  WIDE_BREAKPOINT,
+} from "@/components/ui";
+import type { SearchMode, TourDay } from "@/types";
 
-const ALL_SPORTS: { label: string; value: SportCategory; icon: string; realm: MacroRealm }[] = [
-  { label: "Soccer / Football", value: "football", icon: "⚽", realm: "land" },
-  { label: "Basketball", value: "basketball", icon: "🏀", realm: "land" },
-  { label: "Volleyball", value: "volleyball", icon: "🏐", realm: "land" },
-  { label: "Tennis", value: "tennis", icon: "🎾", realm: "land" },
-  { label: "Swimming", value: "swimming", icon: "🏊", realm: "water" },
-  { label: "Hiking", value: "hiking", icon: "🥾", realm: "mountain" },
-  { label: "Running", value: "running", icon: "🏃", realm: "land" },
-  { label: "Cycling", value: "cycling", icon: "🚴", realm: "land" },
-  { label: "Climbing", value: "climbing", icon: "🧗", realm: "mountain" },
-  { label: "Padel", value: "padel", icon: "🏓", realm: "land" },
-  { label: "Athletic Gym", value: "gym", icon: "🏋️", realm: "land" },
-  { label: "Boxing & Combat", value: "boxing", icon: "🥊", realm: "land" },
-  { label: "Surfing", value: "surfing", icon: "🏄", realm: "water" },
-  { label: "Rowing", value: "rowing", icon: "🚣", realm: "water" },
-  { label: "Sailing", value: "sailing", icon: "⛵", realm: "water" },
-  { label: "Trail Running", value: "trail_running", icon: "🌲", realm: "mountain" },
-  { label: "Pilates", value: "pilates", icon: "🤸", realm: "land" },
-  { label: "Yoga", value: "yoga", icon: "🧘", realm: "land" },
-  { label: "CrossFit", value: "crossfit", icon: "⚡", realm: "land" },
-  { label: "Martial Arts", value: "martial_arts", icon: "🥋", realm: "land" },
+const MODES: { value: SearchMode; label: string; hint: string }[] = [
+  { value: "sport-first", label: "Sport first", hint: `Venues within ${MAX_RADIUS_KM} km` },
+  { value: "destination-first", label: "Destination first", hint: "Multi-day trips" },
 ];
 
+const STAY_OPTIONS = [1, 2, 3, 5, 7];
+
 export default function DiscoverScreen() {
-  const { isPhone, isTablet, isDesktop } = useResponsive();
+  const searchMode = useDiscoverStore((s) => s.searchMode);
+  const setSearchMode = useDiscoverStore((s) => s.setSearchMode);
+
+  return (
+    <Screen width="wide" inTabs>
+      <PageHeader eyebrow="endorphix" title="Discover" />
+      <SegmentedControl
+        accessibilityLabel="Search mode"
+        options={MODES}
+        value={searchMode}
+        onChange={setSearchMode}
+      />
+      <View className="mt-6">{searchMode === "sport-first" ? <SportFirst /> : <DestinationFirst />}</View>
+    </Screen>
+  );
+}
+
+function FilterGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <View className="mb-5 gap-2">
+      <Eyebrow>{label}</Eyebrow>
+      {children}
+    </View>
+  );
+}
+
+function SportFirst() {
   const router = useRouter();
-  const { tap, selection, success } = useHaptics();
-  const { userLocation } = useLocationStore();
-  const { bookings, openEnergyLoggingForBooking } = useBookingStore();
-  const pendingBooking = bookings.find((b) => b.status === "completed");
-  const {
-    searchMode,
-    selectedRealm,
-    setSelectedRealm,
-    selectedSport,
-    setSelectedSport,
-    radiusKm,
-    setRadiusKm,
-    destination,
-    setDestination,
-    tourDays,
-    setTourDays,
-    tourRealms,
-    setTourRealms,
-  } = useDiscoverStore();
+  const { width } = useWindowDimensions();
+  const userLocation = useLocationStore((s) => s.userLocation);
+  const locationStatus = useLocationStore((s) => s.status);
+  const { selectedRealm, selectedSport, radiusKm, toggleRealm, toggleSport, setRadiusKm, clearFilters } =
+    useDiscoverStore(
+      useShallow((s) => ({
+        selectedRealm: s.selectedRealm,
+        selectedSport: s.selectedSport,
+        radiusKm: s.radiusKm,
+        toggleRealm: s.toggleRealm,
+        toggleSport: s.toggleSport,
+        setRadiusKm: s.setRadiusKm,
+        clearFilters: s.clearFilters,
+      })),
+    );
 
-  const [generatedPlan, setGeneratedPlan] = useState<TourPlan | null>(null);
-  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const filter = selectedSport ?? selectedRealm ?? undefined;
+  const { data: facilities, isPending, isError, refetch } = useNearbyFacilities(userLocation, filter, radiusKm);
 
-  // Active filter for sport-first
-  const activeFilter = selectedSport || selectedRealm || undefined;
+  const sports = selectedRealm ? SPORTS.filter((s) => s.realm === selectedRealm) : SPORTS;
+  const hasFilters = Boolean(selectedRealm || selectedSport) || radiusKm !== MAX_RADIUS_KM;
 
-  const {
-    data: facilities,
-    isLoading,
-    error,
-    refetch,
-  } = useNearbyFacilities(userLocation, activeFilter, radiusKm);
+  const sportChips = sports.map((sport) => (
+    <Chip
+      key={sport.id}
+      label={sport.label}
+      selected={selectedSport === sport.id}
+      onPress={() => toggleSport(sport.id)}
+    />
+  ));
 
-  const handleSelectRealm = (realm: MacroRealm) => {
-    selection();
-    if (selectedRealm === realm) {
-      setSelectedRealm(null);
-      setSelectedSport(null);
-    } else {
-      setSelectedRealm(realm);
-      setSelectedSport(null);
+  let results: ReactNode;
+  if (isPending) {
+    results = (
+      <ResultsGrid>
+        {Array.from({ length: 6 }, (_, i) => (
+          <FacilityCardSkeleton key={i} />
+        ))}
+      </ResultsGrid>
+    );
+  } else if (isError) {
+    results = <ErrorState title="Couldn't load venues" onRetry={() => refetch()} />;
+  } else if (!facilities?.length) {
+    results = (
+      <EmptyState
+        title="No venues match these filters"
+        message="Try a wider radius or a different realm."
+        actionLabel={hasFilters ? "Clear filters" : undefined}
+        onAction={hasFilters ? clearFilters : undefined}
+      />
+    );
+  } else {
+    results = (
+      <ResultsGrid>
+        {facilities.map((facility) => (
+          <FacilityCard
+            key={facility.id}
+            facility={facility}
+            onPress={() => router.push(`/facility/${facility.id}`)}
+          />
+        ))}
+      </ResultsGrid>
+    );
+  }
+
+  return (
+    <>
+      <FilterGroup label="Realm">
+        <View className="flex-row gap-2">
+          {MACRO_REALMS.map((realm) => (
+            <Chip
+              key={realm.id}
+              grow
+              label={realm.label}
+              sublabel={realm.descriptor}
+              dotColor={realm.accent}
+              selected={selectedRealm === realm.id}
+              onPress={() => toggleRealm(realm.id)}
+            />
+          ))}
+        </View>
+      </FilterGroup>
+
+      <FilterGroup label="Sport">
+        {width >= WIDE_BREAKPOINT ? (
+          <View className="flex-row flex-wrap gap-2">{sportChips}</View>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {sportChips}
+          </ScrollView>
+        )}
+      </FilterGroup>
+
+      <FilterGroup label="Radius">
+        <View className="flex-row flex-wrap gap-2">
+          {RADIUS_OPTIONS_KM.map((km) => (
+            <Chip
+              key={km}
+              label={`${km} km`}
+              selected={radiusKm === km}
+              onPress={() => setRadiusKm(km)}
+            />
+          ))}
+        </View>
+      </FilterGroup>
+
+      <SectionHeader
+        title={facilities && !isPending ? `${facilities.length} venues within ${radiusKm} km` : `Venues within ${radiusKm} km`}
+        action={hasFilters ? <Button label="Clear filters" variant="link" onPress={clearFilters} /> : null}
+      />
+
+      {locationStatus === "fallback" ? (
+        <View className="mb-3 flex-row items-center gap-2">
+          <Ionicons name="location-outline" size={16} color={Colors.inkMuted} />
+          <Text className="min-w-0 flex-1 text-sm text-ink-muted">
+            Your location is unavailable, so we're showing venues near {FALLBACK_LOCATION_LABEL}.
+          </Text>
+        </View>
+      ) : null}
+
+      {results}
+    </>
+  );
+}
+
+function ResultsGrid({ children }: { children: ReactNode }) {
+  return (
+    <View className="-mx-2 flex-row flex-wrap">
+      {Children.map(children, (child) => (
+        <View className="w-full p-2 sm:w-1/2 lg:w-1/3">{child}</View>
+      ))}
+    </View>
+  );
+}
+
+function DestinationFirst() {
+  const { destination, tourDays, tourPlan, setDestination, setTourDays, setTourPlan } = useDiscoverStore(
+    useShallow((s) => ({
+      destination: s.destination,
+      tourDays: s.tourDays,
+      tourPlan: s.tourPlan,
+      setDestination: s.setDestination,
+      setTourDays: s.setTourDays,
+      setTourPlan: s.setTourPlan,
+    })),
+  );
+  const [error, setError] = useState<string>();
+
+  const buildPlan = () => {
+    if (!destination.trim()) {
+      setError("Enter a destination.");
+      haptics.error();
+      return;
     }
-  };
-
-  const handleSelectSport = (sport: SportCategory) => {
-    selection();
-    if (selectedSport === sport) {
-      setSelectedSport(null);
-    } else {
-      setSelectedSport(sport);
-    }
-  };
-
-  const handleGeneratePackage = () => {
-    tap();
-    setIsGeneratingPlan(true);
-    setTimeout(() => {
-      const plan = generateDestinationActionPackages(
-        destination || "St. Moritz Athletic Sanctuary",
-        tourDays,
-        radiusKm,
-        tourRealms
-      );
-      setGeneratedPlan(plan);
-      setIsGeneratingPlan(false);
-      success();
-    }, 450);
+    setTourPlan(
+      generateDestinationActionPackages(destination.trim(), tourDays, MAX_RADIUS_KM, ["land", "water", "mountain"]),
+    );
+    haptics.success();
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.chalk }}>
-      <ScrollView
-        contentContainerStyle={{
-          paddingBottom: 110,
-          paddingTop: Platform.OS === "ios" ? 56 : 40,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        <ResponsiveContainer maxWidth={1180} noPadding>
-        {/* Brand Header */}
-        <MotiView
-          from={{ opacity: 0, translateY: -10 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 400 }}
-          style={{ paddingHorizontal: Spacing.xl, marginBottom: 18 }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 4,
-            }}
-          >
-            <Text
-              style={{
-                color: Colors.olive,
-                fontSize: 11,
-                fontWeight: "800",
-                letterSpacing: 2.5,
-              }}
-            >
-              ENDORPHIX ATHLETIC
-            </Text>
-          </View>
-
-          <Text
-            style={{
-              color: Colors.espresso,
-              fontSize: 34,
-              fontWeight: "800",
-              letterSpacing: -0.8,
-            }}
-          >
-            Discover.
-          </Text>
-        </MotiView>
-
-        {/* Discrete After-Activity Alert Pill */}
-        {pendingBooking && (
-          <View style={{ paddingHorizontal: Spacing.xl, marginBottom: 14 }}>
-            <TouchableOpacity
-              onPress={() => {
-                tap();
-                openEnergyLoggingForBooking(pendingBooking);
-                router.push(`/energy/modal?bookingId=${pendingBooking.id}`);
-              }}
-              activeOpacity={0.85}
-              style={{
-                backgroundColor: Colors.terracotta + "16",
-                borderWidth: 1,
-                borderColor: Colors.terracotta + "44",
-                borderRadius: 12,
-                paddingVertical: 10,
-                paddingHorizontal: 14,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.terracotta }} />
-                <Text style={{ color: Colors.espresso, fontSize: 12, fontWeight: "700" }}>
-                  {pendingBooking.activity_name} completed 30m ago · Slide Energy
-                </Text>
-              </View>
-              <Text style={{ color: Colors.terracotta, fontSize: 12, fontWeight: "800" }}>
-                Rate →
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Dual-Path Mode Toggle */}
-        <View style={{ paddingHorizontal: Spacing.xl, marginBottom: 20 }}>
-          <SearchModeToggle />
-        </View>
-
-        {/* ─── PATH 1: SPORT-FIRST ─── */}
-        {searchMode === "sport-first" ? (
-          <View>
-            {/* Macro Sport Realms Selector (Water, Land, Mountain) */}
-            <View style={{ paddingHorizontal: Spacing.xl, marginBottom: 14 }}>
-              <Text
-                style={{
-                  color: Colors.espressoMuted,
-                  fontSize: 11,
-                  fontWeight: "800",
-                  letterSpacing: 1.5,
-                  marginBottom: 10,
-                }}
-              >
-                SELECT REALM (WATER · LAND · MOUNTAIN)
-              </Text>
-
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                {MACRO_REALMS.map((realm) => {
-                  const isSelected = selectedRealm === realm.id;
-                  return (
-                    <TouchableOpacity
-                      key={realm.id}
-                      onPress={() => handleSelectRealm(realm.id)}
-                      activeOpacity={0.85}
-                      style={{
-                        flex: 1,
-                        backgroundColor: isSelected ? realm.accent : Colors.sand,
-                        borderRadius: 14,
-                        paddingVertical: 12,
-                        paddingHorizontal: 8,
-                        alignItems: "center",
-                        borderWidth: 1,
-                        borderColor: isSelected ? realm.accent : Colors.sandDark,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: isSelected ? Colors.chalk : Colors.espresso,
-                          fontSize: 13,
-                          fontWeight: "800",
-                          letterSpacing: 0.5,
-                        }}
-                      >
-                        {realm.label}
-                      </Text>
-                      <Text
-                        style={{
-                          color: isSelected ? Colors.sandLight : Colors.espressoMuted,
-                          fontSize: 9.5,
-                          fontWeight: "600",
-                          marginTop: 2,
-                        }}
-                      >
-                        {realm.id === "water" ? "Aquatic" : realm.id === "mountain" ? "Vertical" : "Country Club"}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* All Sports Categories Horizontal Row */}
-            <View style={{ marginBottom: 16 }}>
-              <View
-                style={{
-                  paddingHorizontal: Spacing.xl,
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 8,
-                }}
-              >
-                <Text
-                  style={{
-                    color: Colors.espressoMuted,
-                    fontSize: 11,
-                    fontWeight: "800",
-                    letterSpacing: 1.5,
-                  }}
-                >
-                  ALL SPORT CATEGORIES
-                </Text>
-                {selectedSport && (
-                  <TouchableOpacity onPress={() => setSelectedSport(null)}>
-                    <Text style={{ color: Colors.olive, fontSize: 11, fontWeight: "700" }}>
-                      Clear Filter ✕
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: Spacing.xl, gap: 8 }}
-              >
-                {ALL_SPORTS.filter(
-                  (s) => !selectedRealm || s.realm === selectedRealm
-                ).map((item) => {
-                  const isSelected = selectedSport === item.value;
-                  return (
-                    <TouchableOpacity
-                      key={item.value}
-                      onPress={() => handleSelectSport(item.value)}
-                      activeOpacity={0.85}
-                      style={{
-                        backgroundColor: isSelected ? Colors.olive : Colors.softChalk,
-                        paddingHorizontal: 13,
-                        paddingVertical: 9,
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: isSelected ? Colors.olive : Colors.sandDark,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Text style={{ fontSize: 14 }}>{item.icon}</Text>
-                      <Text
-                        style={{
-                          color: isSelected ? Colors.chalk : Colors.espresso,
-                          fontSize: 12.5,
-                          fontWeight: isSelected ? "800" : "600",
-                        }}
-                      >
-                        {item.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
-            {/* Proximity Radius Selector */}
-            <View
-              style={{
-                paddingHorizontal: Spacing.xl,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 16,
-              }}
-            >
-              <Text
-                style={{
-                  color: Colors.espressoFaint,
-                  fontSize: 11,
-                  fontWeight: "800",
-                  letterSpacing: 1.5,
-                }}
-              >
-                PROXIMITY RADIUS
-              </Text>
-
-              <View style={{ flexDirection: "row", gap: 6 }}>
-                {[10, 25, 50].map((km) => {
-                  const isCurrent = radiusKm === km;
-                  return (
-                    <TouchableOpacity
-                      key={km}
-                      onPress={() => {
-                        selection();
-                        setRadiusKm(km);
-                      }}
-                      style={{
-                        backgroundColor: isCurrent ? Colors.navy : Colors.sand,
-                        paddingHorizontal: 10,
-                        paddingVertical: 4,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: isCurrent ? Colors.navy : Colors.sandDark,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: isCurrent ? Colors.chalk : Colors.espresso,
-                          fontSize: 11,
-                          fontWeight: "700",
-                        }}
-                      >
-                        {km}km
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Facilities List */}
-            <View style={{ paddingHorizontal: Spacing.xl }}>
-              {/* Dynamic Athletic Valuation & Order Metrics */}
-              {bookings.length > 0 && (
-                <SportAthleticStats
-                  bookings={bookings}
-                  selectedSport={selectedSport}
-                  onSelectSport={(sport) => {
-                    tap();
-                    if (selectedSport === sport) {
-                      setSelectedSport(null);
-                    } else {
-                      setSelectedSport(sport);
-                    }
-                  }}
-                />
-              )}
-
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 12,
-                }}
-              >
-                <Text
-                  style={{
-                    color: Colors.espresso,
-                    fontSize: 15,
-                    fontWeight: "800",
-                  }}
-                >
-                  Verified Facilities Within {radiusKm}km
-                </Text>
-                <Text style={{ color: Colors.olive, fontSize: 11, fontWeight: "700" }}>
-                  {facilities?.length || 0} VENUES
-                </Text>
-              </View>
-
-              {isLoading ? (
-                <View style={{ paddingVertical: 40, alignItems: "center" }}>
-                  <ActivityIndicator color={Colors.olive} size="large" />
-                  <Text
-                    style={{
-                      color: Colors.espressoMuted,
-                      fontSize: 13,
-                      fontWeight: "600",
-                      marginTop: 10,
-                    }}
-                  >
-                    Querying OpenStreetMap & PostGIS...
-                  </Text>
-                </View>
-              ) : facilities && facilities.length > 0 ? (
-                <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 14 }}>
-                  {facilities.map((fac) => (
-                    <View key={fac.id} style={{ width: isPhone ? "100%" : isTablet ? "48.5%" : "32%" }}>
-                      <FacilityCard
-                        facility={fac}
-                        onPress={() => {
-                          tap();
-                          router.push(`/facility/${fac.id}`);
-                        }}
-                      />
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <View
-                  style={{
-                    backgroundColor: Colors.sand,
-                    borderRadius: 16,
-                    padding: 24,
-                    alignItems: "center",
-                    borderWidth: 1,
-                    borderColor: Colors.sandDark,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: Colors.espresso,
-                      fontSize: 15,
-                      fontWeight: "700",
-                      textAlign: "center",
-                      marginBottom: 6,
-                    }}
-                  >
-                    No venues found in this realm radius.
-                  </Text>
-                  <Text
-                    style={{
-                      color: Colors.espressoMuted,
-                      fontSize: 13,
-                      textAlign: "center",
-                      marginBottom: 14,
-                    }}
-                  >
-                    Expand your radius to 50km or select all realms.
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setRadiusKm(50);
-                      setSelectedRealm(null);
-                      setSelectedSport(null);
-                    }}
-                    style={{
-                      backgroundColor: Colors.olive,
-                      paddingHorizontal: 16,
-                      paddingVertical: 10,
-                      borderRadius: 10,
-                    }}
-                  >
-                    <Text style={{ color: Colors.chalk, fontSize: 12, fontWeight: "800" }}>
-                      Reset to 50km All Realms
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          </View>
-        ) : (
-          /* ─── PATH 2: DESTINATION-FIRST ─── */
-          <View style={{ paddingHorizontal: Spacing.xl }}>
-            {/* Input Card */}
-            <View
-              style={{
-                backgroundColor: Colors.sand,
-                borderRadius: 20,
-                padding: 20,
-                borderWidth: 1,
-                borderColor: Colors.sandDark,
-                marginBottom: 20,
-              }}
-            >
-              <Text
-                style={{
-                  color: Colors.espresso,
-                  fontSize: 12,
-                  fontWeight: "800",
-                  letterSpacing: 1,
-                  marginBottom: 8,
-                }}
-              >
-                DESTINATION / ATHLETIC RETREAT
-              </Text>
-              <TextInput
-                value={destination}
-                onChangeText={setDestination}
-                placeholder="e.g. St. Moritz, Engadin, Wimbledon, Monaco"
-                placeholderTextColor={Colors.espressoFaint}
-                style={{
-                  backgroundColor: Colors.softChalk,
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 13,
-                  color: Colors.espresso,
-                  fontSize: 14.5,
-                  fontWeight: "600",
-                  borderWidth: 1,
-                  borderColor: Colors.sandDark,
-                  marginBottom: 16,
-                }}
+    <>
+      <Card className="gap-5">
+        <TextField
+          label="Destination"
+          value={destination}
+          onChangeText={(value) => {
+            setDestination(value);
+            setError(undefined);
+          }}
+          error={error}
+          placeholder="e.g. St. Moritz, Monaco, Mallorca"
+          returnKeyType="go"
+          onSubmitEditing={buildPlan}
+        />
+        <View className="gap-2">
+          <Text className="text-sm font-semibold text-ink">Length of stay</Text>
+          <View className="flex-row gap-2">
+            {STAY_OPTIONS.map((days) => (
+              <Chip
+                key={days}
+                grow
+                label={`${days}d`}
+                accessibilityLabel={`${days} ${days === 1 ? "day" : "days"}`}
+                selected={tourDays === days}
+                onPress={() => setTourDays(days)}
               />
-
-              {/* Days of Stay Selector */}
-              <View style={{ marginBottom: 16 }}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 8,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: Colors.espresso,
-                      fontSize: 12,
-                      fontWeight: "800",
-                      letterSpacing: 0.5,
-                    }}
-                  >
-                    DURATION OF STAY
-                  </Text>
-                  <Text style={{ color: Colors.olive, fontSize: 13, fontWeight: "800" }}>
-                    {tourDays} DAYS
-                  </Text>
-                </View>
-
-                <View style={{ flexDirection: "row", gap: 6 }}>
-                  {[1, 2, 3, 5, 7].map((d) => {
-                    const isSelected = tourDays === d;
-                    return (
-                      <TouchableOpacity
-                        key={d}
-                        onPress={() => {
-                          selection();
-                          setTourDays(d);
-                        }}
-                        style={{
-                          flex: 1,
-                          backgroundColor: isSelected ? Colors.olive : Colors.softChalk,
-                          paddingVertical: 10,
-                          borderRadius: 10,
-                          alignItems: "center",
-                          borderWidth: 1,
-                          borderColor: isSelected ? Colors.olive : Colors.sandDark,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: isSelected ? Colors.chalk : Colors.espresso,
-                            fontSize: 12,
-                            fontWeight: "800",
-                          }}
-                        >
-                          {d}d
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              {/* Generate Button */}
-              <TouchableOpacity
-                onPress={handleGeneratePackage}
-                activeOpacity={0.88}
-                style={{
-                  backgroundColor: Colors.navy,
-                  borderRadius: 14,
-                  paddingVertical: 15,
-                  alignItems: "center",
-                }}
-              >
-                <Text style={{ color: Colors.chalk, fontSize: 14, fontWeight: "800", letterSpacing: 0.5 }}>
-                  {isGeneratingPlan ? "Architecting Action Package..." : "Generate Tailored Action Package →"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Generated Tour Plan Output */}
-            {generatedPlan && (
-              <MotiView
-                from={{ opacity: 0, translateY: 14 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: "timing", duration: 450 }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 14,
-                  }}
-                >
-                  <View>
-                    <Text
-                      style={{
-                        color: Colors.espressoFaint,
-                        fontSize: 10,
-                        fontWeight: "800",
-                        letterSpacing: 2,
-                      }}
-                    >
-                      TAILORED MULTI-DAY ITINERARY
-                    </Text>
-                    <Text style={{ color: Colors.espresso, fontSize: 20, fontWeight: "800" }}>
-                      {generatedPlan.destination}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 14 }}>
-                {generatedPlan.tour_days.map((day) => (
-                  <View key={day.day} style={{ width: isPhone ? "100%" : "48.5%" }}>
-                  <View
-                    key={day.day}
-                    style={{
-                      backgroundColor: Colors.sand,
-                      borderRadius: 18,
-                      padding: 18,
-                      marginBottom: 14,
-                      borderWidth: 1,
-                      borderColor: Colors.sandDark,
-                    }}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: 10,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: Colors.olive,
-                          fontSize: 12,
-                          fontWeight: "800",
-                          letterSpacing: 1.5,
-                        }}
-                      >
-                        DAY {day.day} · {day.theme.toUpperCase()}
-                      </Text>
-                    </View>
-
-                    {day.activities.map((act, actIdx) => (
-                      <View
-                        key={actIdx}
-                        style={{
-                          backgroundColor: Colors.softChalk,
-                          borderRadius: 12,
-                          padding: 12,
-                          marginBottom: actIdx < day.activities.length - 1 ? 8 : 0,
-                          borderLeftWidth: 3,
-                          borderLeftColor: act.intensity === "High" ? Colors.terracotta : Colors.olive,
-                        }}
-                      >
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginBottom: 4,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              color: Colors.espresso,
-                              fontSize: 13,
-                              fontWeight: "800",
-                            }}
-                          >
-                            {act.title}
-                          </Text>
-                          <View
-                            style={{
-                              backgroundColor: Colors.sand,
-                              paddingHorizontal: 6,
-                              paddingVertical: 2,
-                              borderRadius: 4,
-                            }}
-                          >
-                            <Text
-                              style={{
-                                color:
-                                  act.intensity === "High"
-                                    ? Colors.terracotta
-                                    : Colors.olive,
-                                fontSize: 9,
-                                fontWeight: "800",
-                              }}
-                            >
-                              {act.intensity.toUpperCase()}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <Text
-                          style={{
-                            color: Colors.espressoMuted,
-                            fontSize: 12,
-                            lineHeight: 17,
-                            marginBottom: 8,
-                          }}
-                        >
-                          {act.description}
-                        </Text>
-
-                        <TouchableOpacity
-                          onPress={() => {
-                            tap();
-                            router.push(`/facility/${act.facility.id}`);
-                          }}
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 4,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              color: Colors.olive,
-                              fontSize: 11,
-                              fontWeight: "700",
-                            }}
-                          >
-                            View Venue ({act.facility.name}) →
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                  </View>
-                ))}
-                </View>
-              </MotiView>
-            )}
+            ))}
           </View>
-        )}
-        </ResponsiveContainer>
-      </ScrollView>
-    </View>
+        </View>
+        <Button label="Build my itinerary" icon="map-outline" onPress={buildPlan} />
+      </Card>
+
+      {tourPlan ? (
+        <View className="mt-8">
+          <SectionHeader title={`${tourPlan.days}-day plan · ${tourPlan.destination}`} />
+          <Text className="-mt-1 mb-2 text-sm text-ink-muted">Sessions are drawn from endorphix partner venues.</Text>
+          <View className="-mx-2 flex-row flex-wrap">
+            {tourPlan.tour_days.map((day) => (
+              <View key={day.day} className="w-full p-2 md:w-1/2">
+                <TourDayCard day={day} />
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+function TourDayCard({ day }: { day: TourDay }) {
+  const router = useRouter();
+  return (
+    <Card>
+      <Eyebrow tone="olive">Day {day.day}</Eyebrow>
+      <Text className="mt-1 text-lg font-bold text-ink">{day.theme}</Text>
+      <View className="mt-3 gap-3">
+        {day.activities.map((activity) => (
+          <Pressable
+            key={activity.title}
+            accessibilityRole="button"
+            accessibilityHint={`Opens ${activity.facility.name}`}
+            onPress={() => {
+              haptics.tap();
+              router.push(`/facility/${activity.facility.id}`);
+            }}
+            className="rounded-xl border border-line bg-paper p-3 active:opacity-80"
+          >
+            <View className="flex-row items-start justify-between gap-2">
+              <Text className="min-w-0 flex-1 text-sm font-bold text-ink">{activity.title}</Text>
+              <Tag label={activity.intensity} tone={activity.intensity === "Recovery" ? "neutral" : "terracotta"} />
+            </View>
+            <Text className="mt-1 text-sm leading-5 text-ink-muted">{activity.description}</Text>
+            <View className="mt-2 flex-row items-center gap-1">
+              <Text numberOfLines={1} className="min-w-0 flex-1 text-sm font-semibold text-olive">
+                {activity.facility.name}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={Colors.olive} />
+            </View>
+          </Pressable>
+        ))}
+      </View>
+    </Card>
   );
 }

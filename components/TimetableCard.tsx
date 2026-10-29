@@ -1,100 +1,55 @@
-import React from "react";
-import { View, Text } from "react-native";
-import { Colors } from "@/constants";
+import { Text, View } from "react-native";
+import { todayKey } from "@/utils";
+import { Card } from "@/components/ui";
 import type { FacilityTimetable } from "@/types";
 
 const DAYS: { key: keyof FacilityTimetable; label: string }[] = [
-  { key: "monday", label: "Mon" },
-  { key: "tuesday", label: "Tue" },
-  { key: "wednesday", label: "Wed" },
-  { key: "thursday", label: "Thu" },
-  { key: "friday", label: "Fri" },
-  { key: "saturday", label: "Sat" },
-  { key: "sunday", label: "Sun" },
+  { key: "monday", label: "Monday" },
+  { key: "tuesday", label: "Tuesday" },
+  { key: "wednesday", label: "Wednesday" },
+  { key: "thursday", label: "Thursday" },
+  { key: "friday", label: "Friday" },
+  { key: "saturday", label: "Saturday" },
+  { key: "sunday", label: "Sunday" },
 ];
 
-const today = new Date().toLocaleDateString("en-US", { weekday: "long" }).toLowerCase() as keyof FacilityTimetable;
+export function TimetableCard({ timetable }: { timetable: FacilityTimetable }) {
+  const hasHours = DAYS.some(({ key }) => timetable[key] !== undefined);
+  const today = todayKey();
 
-interface TimetableCardProps {
-  timetable: FacilityTimetable;
-}
+  if (!hasHours) {
+    return (
+      <View className="rounded-2xl border border-dashed border-line px-4 py-6">
+        <Text className="text-center text-sm text-ink-muted">Opening hours aren't listed for this venue.</Text>
+      </View>
+    );
+  }
 
-export function TimetableCard({ timetable }: TimetableCardProps) {
   return (
-    <View
-      style={{
-        backgroundColor: Colors.sand,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: Colors.sandDark,
-        overflow: "hidden",
-      }}
-    >
+    <Card flush>
       {DAYS.map(({ key, label }, index) => {
         const slot = timetable[key];
         const isToday = key === today;
-
+        const hours = slot ? `${slot.open} – ${slot.close}` : "Closed";
         return (
           <View
             key={key}
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              backgroundColor: isToday ? Colors.softChalk : "transparent",
-              borderBottomWidth: index < DAYS.length - 1 ? 1 : 0,
-              borderBottomColor: Colors.sandDark,
-            }}
+            accessible
+            accessibilityLabel={`${label}${isToday ? ", today" : ""}: ${hours}`}
+            className={`flex-row items-center justify-between px-4 py-3 ${isToday ? "bg-paper" : ""} ${
+              index < DAYS.length - 1 ? "border-b border-line" : ""
+            }`}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              {isToday && (
-                <View
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: Colors.olive,
-                  }}
-                />
-              )}
-              <Text
-                style={{
-                  color: isToday ? Colors.olive : Colors.espressoMuted,
-                  fontSize: 13,
-                  fontWeight: isToday ? "800" : "500",
-                  width: 38,
-                }}
-              >
-                {label}
-              </Text>
-            </View>
-
-            {slot ? (
-              <Text
-                style={{
-                  color: isToday ? Colors.espresso : Colors.espressoMuted,
-                  fontSize: 13,
-                  fontWeight: isToday ? "700" : "400",
-                }}
-              >
-                {slot.open} – {slot.close}
-              </Text>
-            ) : (
-              <Text
-                style={{
-                  color: Colors.espressoFaint,
-                  fontSize: 13,
-                  fontStyle: "italic",
-                }}
-              >
-                Rest / Closed
-              </Text>
-            )}
+            <Text className={`text-sm ${isToday ? "font-bold text-olive" : "text-ink-muted"}`}>
+              {label}
+              {isToday ? " · Today" : ""}
+            </Text>
+            <Text className={`text-sm ${isToday ? "font-bold text-ink" : slot ? "text-ink" : "text-ink-muted"}`}>
+              {hours}
+            </Text>
           </View>
         );
       })}
-    </View>
+    </Card>
   );
 }

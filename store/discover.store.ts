@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { SearchMode, SportCategory, MacroRealm } from "@/types";
+import { MAX_RADIUS_KM } from "@/constants";
+import type { MacroRealm, SearchMode, SportCategory, TourPlan } from "@/types";
 
 interface DiscoverState {
   searchMode: SearchMode;
@@ -8,36 +9,35 @@ interface DiscoverState {
   radiusKm: number;
   destination: string;
   tourDays: number;
-  tourRealms: MacroRealm[];
+  tourPlan: TourPlan | null;
   setSearchMode: (mode: SearchMode) => void;
-  setSelectedRealm: (realm: MacroRealm | null) => void;
-  setSelectedSport: (sport: SportCategory | null) => void;
+  /** Selecting the active realm again clears it. Changing realm always clears the sport. */
+  toggleRealm: (realm: MacroRealm) => void;
+  /** Selecting the active sport again clears it. */
+  toggleSport: (sport: SportCategory) => void;
   setRadiusKm: (radiusKm: number) => void;
   setDestination: (destination: string) => void;
   setTourDays: (days: number) => void;
-  setTourRealms: (realms: MacroRealm[]) => void;
-  resetDiscover: () => void;
+  setTourPlan: (plan: TourPlan | null) => void;
+  clearFilters: () => void;
 }
 
-const initialState = {
-  searchMode: "sport-first" as SearchMode,
-  selectedRealm: null as MacroRealm | null,
-  selectedSport: null as SportCategory | null,
-  radiusKm: 50,
-  destination: "St. Moritz & Engadin Valley",
-  tourDays: 3,
-  tourRealms: ["land", "water", "mountain"] as MacroRealm[],
-};
-
 export const useDiscoverStore = create<DiscoverState>((set) => ({
-  ...initialState,
+  searchMode: "sport-first",
+  selectedRealm: null,
+  selectedSport: null,
+  radiusKm: MAX_RADIUS_KM,
+  destination: "",
+  tourDays: 3,
+  tourPlan: null,
 
   setSearchMode: (searchMode) => set({ searchMode }),
-  setSelectedRealm: (selectedRealm) => set({ selectedRealm, selectedSport: null }),
-  setSelectedSport: (selectedSport) => set({ selectedSport }),
+  toggleRealm: (realm) =>
+    set((state) => ({ selectedRealm: state.selectedRealm === realm ? null : realm, selectedSport: null })),
+  toggleSport: (sport) => set((state) => ({ selectedSport: state.selectedSport === sport ? null : sport })),
   setRadiusKm: (radiusKm) => set({ radiusKm }),
   setDestination: (destination) => set({ destination }),
   setTourDays: (tourDays) => set({ tourDays }),
-  setTourRealms: (tourRealms) => set({ tourRealms }),
-  resetDiscover: () => set(initialState),
+  setTourPlan: (tourPlan) => set({ tourPlan }),
+  clearFilters: () => set({ selectedRealm: null, selectedSport: null, radiusKm: MAX_RADIUS_KM }),
 }));

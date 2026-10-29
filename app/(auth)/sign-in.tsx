@@ -1,375 +1,136 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from "react-native";
-import { useRouter, Link } from "expo-router";
-import { MotiView } from "moti";
+import { useRef, useState } from "react";
+import { Pressable, Text, TextInput, View } from "react-native";
+import { Link, useRouter } from "expo-router";
+import { MAX_RADIUS_KM } from "@/constants";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { useAuthStore } from "@/store/auth.store";
-import { useHaptics } from "@/hooks/useHaptics";
-import { showAlert } from "@/lib/alert";
-import { Colors, Spacing } from "@/constants";
+import { haptics } from "@/lib/haptics";
+import { compactErrors, emailError, errorMessage, requiredError } from "@/lib/validation";
+import { DEMO_ATHLETE, useAuthStore } from "@/store/auth.store";
+import { Button, Card, PageHeader, Screen, TextField } from "@/components/ui";
+import type { User } from "@/types";
 
 export default function SignInScreen() {
   const router = useRouter();
-  const { tap, success, error: errorHaptic } = useHaptics();
-  const { setUser } = useAuthStore();
+  const setUser = useAuthStore((s) => s.setUser);
+  const passwordRef = useRef<TextInput>(null);
 
-  const [email, setEmail] = useState("julian@endorphix.app");
-  const [password, setPassword] = useState("••••••••••••");
-  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSignIn = async () => {
-    tap();
-    if (!email) {
-      showAlert("Missing Email", "Please enter your athlete email address.");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      if (isSupabaseConfigured) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password: password.startsWith("•") ? "endorphix2026" : password,
-        });
-
-        if (error) {
-          errorHaptic();
-          showAlert("Sign In Notice", error.message);
-          setIsLoading(false);
-          return;
-        }
-
-        if (data.user) {
-          const { data: profile } = await supabase
-            .from("users")
-            .select("*")
-            .eq("id", data.user.id)
-            .single();
-
-          if (profile) {
-            setUser(profile as any);
-          }
-        }
-      } else {
-        // Fast local authentication
-        setUser({
-          id: "athlete-julian",
-          email,
-          username: email.split("@")[0],
-          first_name: "Julian",
-          last_name: "Sterling",
-          nickname: "The Cadence",
-          display_name: "Julian Sterling",
-          bio: "Country club tennis competitor & high-cadence endurance cyclist.",
-          streak_current: 9,
-          streak_longest: 24,
-          lifetime_sessions: 48,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-      }
-
-      success();
-      router.replace("/(tabs)/discover");
-    } catch (err: any) {
-      errorHaptic();
-      showAlert("Authentication Error", err.message || "An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleFastDemoLogin = () => {
-    tap();
-    setUser({
-      id: "athlete-julian",
-      email: "julian@endorphix.app",
-      username: "julian_sterling",
-      first_name: "Julian",
-      last_name: "Sterling",
-      nickname: "The Cadence",
-      display_name: "Julian Sterling",
-      bio: "Country club tennis competitor & high-cadence endurance cyclist.",
-      streak_current: 9,
-      streak_longest: 24,
-      lifetime_sessions: 48,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
-    success();
+  const enterApp = (user: User) => {
+    setUser(user);
+    haptics.success();
     router.replace("/(tabs)/discover");
   };
 
+  const handleSignIn = async () => {
+    const nextErrors = compactErrors({ email: emailError(email), password: requiredError(password, "password") });
+    setErrors(nextErrors);
+    setFormError(null);
+    if (Object.keys(nextErrors).length) {
+      haptics.error();
+      return;
+    }
+
+    if (!isSupabaseConfigured) {
+      enterApp({ ...DEMO_ATHLETE, email: email.trim() });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) throw error;
+      const { data: profile, error: profileError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", data.user.id)
+        .single();
+      if (profileError) throw profileError;
+      enterApp(profile as unknown as User);
+    } catch (err) {
+      haptics.error();
+      setFormError(errorMessage(err, "Sign-in failed. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1, backgroundColor: Colors.chalk }}
-    >
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "center",
-          paddingHorizontal: Spacing.xl,
-          paddingVertical: Spacing["2xl"],
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={{ width: "100%", maxWidth: 460, alignSelf: "center" }}>
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 500 }}
-        >
-          {/* Header */}
-          <View style={{ marginBottom: 32 }}>
-            <Text
-              style={{
-                color: Colors.olive,
-                fontSize: 11,
-                fontWeight: "800",
-                letterSpacing: 2.5,
-                marginBottom: 8,
-              }}
-            >
-              ATHLETE PASSPORT ACCESS
-            </Text>
-            <Text
-              style={{
-                color: Colors.espresso,
-                fontSize: 34,
-                fontWeight: "800",
-                letterSpacing: -0.8,
-                marginBottom: 8,
-              }}
-            >
-              Welcome to endorphix.
-            </Text>
-            <Text
-              style={{
-                color: Colors.espressoMuted,
-                fontSize: 15,
-                lineHeight: 22,
-              }}
-            >
-              Sign in to your vitality passport to channel energy within 50km.
-            </Text>
-          </View>
+    <Screen width="narrow">
+      <PageHeader
+        eyebrow="endorphix"
+        title="Welcome back."
+        subtitle={`Sign in to your vitality passport and find your next session within ${MAX_RADIUS_KM} km.`}
+      />
 
-          {/* Social-Ready Quick Access Buttons */}
-          <View style={{ gap: 10, marginBottom: 24 }}>
-            <TouchableOpacity
-              onPress={handleFastDemoLogin}
-              activeOpacity={0.88}
-              style={{
-                backgroundColor: Colors.navy,
-                borderRadius: 14,
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-              }}
-            >
-              <Text style={{ fontSize: 16 }}>⚡</Text>
-              <Text style={{ color: Colors.chalk, fontSize: 14, fontWeight: "700" }}>
-                Instant Access as Charter Athlete
-              </Text>
-            </TouchableOpacity>
+      {!isSupabaseConfigured ? (
+        <Card tone="paper" className="mb-6 gap-3">
+          <Text className="text-sm leading-5 text-ink-muted">
+            Demo mode: no backend is configured, so any email and password open the demo passport.
+          </Text>
+          <Button
+            label="Continue with demo account"
+            variant="secondary"
+            size="sm"
+            onPress={() => enterApp(DEMO_ATHLETE)}
+          />
+        </Card>
+      ) : null}
 
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <TouchableOpacity
-                onPress={() => {
-                  tap();
-                  showAlert("Social Login", "Apple authentication connected.");
-                }}
-                activeOpacity={0.85}
-                style={{
-                  flex: 1,
-                  backgroundColor: Colors.sand,
-                  borderRadius: 14,
-                  borderWidth: 1,
-                  borderColor: Colors.sandDark,
-                  paddingVertical: 12,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text style={{ color: Colors.espresso, fontSize: 13, fontWeight: "700" }}>
-                  Apple ID
-                </Text>
-              </TouchableOpacity>
+      <View className="gap-4">
+        <TextField
+          label="Email"
+          value={email}
+          onChangeText={(value) => {
+            setEmail(value);
+            setErrors((prev) => ({ ...prev, email: undefined }));
+          }}
+          error={errors.email}
+          placeholder="you@example.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          textContentType="emailAddress"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
+        />
+        <TextField
+          ref={passwordRef}
+          label="Password"
+          value={password}
+          onChangeText={(value) => {
+            setPassword(value);
+            setErrors((prev) => ({ ...prev, password: undefined }));
+          }}
+          error={errors.password}
+          secureTextEntry
+          autoComplete="current-password"
+          textContentType="password"
+          returnKeyType="go"
+          onSubmitEditing={handleSignIn}
+        />
 
-              <TouchableOpacity
-                onPress={() => {
-                  tap();
-                  showAlert("Social Login", "Google authentication connected.");
-                }}
-                activeOpacity={0.85}
-                style={{
-                  flex: 1,
-                  backgroundColor: Colors.sand,
-                  borderRadius: 14,
-                  borderWidth: 1,
-                  borderColor: Colors.sandDark,
-                  paddingVertical: 12,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text style={{ color: Colors.espresso, fontSize: 13, fontWeight: "700" }}>
-                  Google
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+        {formError ? (
+          <Text accessibilityRole="alert" className="text-sm font-medium text-terracotta">
+            {formError}
+          </Text>
+        ) : null}
 
-          {/* Divider */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 24,
-            }}
-          >
-            <View style={{ flex: 1, height: 1, backgroundColor: Colors.sandDark }} />
-            <Text
-              style={{
-                color: Colors.espressoFaint,
-                fontSize: 11,
-                fontWeight: "700",
-                letterSpacing: 1.5,
-              }}
-            >
-              OR EMAIL
-            </Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: Colors.sandDark }} />
-          </View>
+        <Button label="Sign in" onPress={handleSignIn} loading={submitting} className="mt-2" />
+      </View>
 
-          {/* Form Fields */}
-          <View style={{ gap: 16, marginBottom: 24 }}>
-            <View>
-              <Text
-                style={{
-                  color: Colors.espresso,
-                  fontSize: 12,
-                  fontWeight: "700",
-                  letterSpacing: 0.5,
-                  marginBottom: 6,
-                }}
-              >
-                ATHLETE EMAIL
-              </Text>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="athlete@endorphix.app"
-                placeholderTextColor={Colors.espressoFaint}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                style={{
-                  backgroundColor: Colors.sand,
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  color: Colors.espresso,
-                  fontSize: 15,
-                  fontWeight: "500",
-                  borderWidth: 1,
-                  borderColor: Colors.sandDark,
-                }}
-              />
-            </View>
-
-            <View>
-              <Text
-                style={{
-                  color: Colors.espresso,
-                  fontSize: 12,
-                  fontWeight: "700",
-                  letterSpacing: 0.5,
-                  marginBottom: 6,
-                }}
-              >
-                PASSWORD
-              </Text>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••••••"
-                placeholderTextColor={Colors.espressoFaint}
-                secureTextEntry
-                style={{
-                  backgroundColor: Colors.sand,
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  color: Colors.espresso,
-                  fontSize: 15,
-                  fontWeight: "500",
-                  borderWidth: 1,
-                  borderColor: Colors.sandDark,
-                }}
-              />
-            </View>
-          </View>
-
-          {/* Primary Action Button */}
-          <TouchableOpacity
-            onPress={handleSignIn}
-            disabled={isLoading}
-            activeOpacity={0.88}
-            style={{
-              backgroundColor: Colors.olive,
-              borderRadius: 14,
-              paddingVertical: 16,
-              alignItems: "center",
-              marginBottom: 20,
-            }}
-          >
-            <Text
-              style={{
-                color: Colors.chalk,
-                fontSize: 15,
-                fontWeight: "800",
-                letterSpacing: 0.8,
-              }}
-            >
-              {isLoading ? "Validating Passport..." : "Sign In to Passport →"}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Footer Link */}
-          <View style={{ flexDirection: "row", justifyContent: "center", gap: 6 }}>
-            <Text style={{ color: Colors.espressoMuted, fontSize: 13 }}>
-              New to endorphix?
-            </Text>
-            <Link href="/(auth)/sign-up" asChild>
-              <TouchableOpacity>
-                <Text
-                  style={{
-                    color: Colors.olive,
-                    fontSize: 13,
-                    fontWeight: "800",
-                  }}
-                >
-                  Create Athlete Passport
-                </Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </MotiView>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <View className="mt-6 flex-row flex-wrap items-center justify-center gap-1">
+        <Text className="text-sm text-ink-muted">New to endorphix?</Text>
+        <Link href="/(auth)/sign-up" asChild>
+          <Pressable accessibilityRole="link" className="min-h-10 justify-center px-1">
+            <Text className="text-sm font-bold text-olive">Create a passport</Text>
+          </Pressable>
+        </Link>
+      </View>
+    </Screen>
   );
 }
