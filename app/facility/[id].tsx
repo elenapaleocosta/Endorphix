@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
-  Dimensions,
   Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -17,9 +16,9 @@ import { useBookingStore } from "@/store/booking.store";
 import { useHaptics } from "@/hooks/useHaptics";
 import { TimetableCard } from "@/components/TimetableCard";
 import { showAlert } from "@/lib/alert";
+import { ResponsiveContainer } from "@/components/ResponsiveContainer";
+import { useResponsive } from "@/hooks/useResponsive";
 import { Colors, Spacing } from "@/constants";
-
-const { height: SCREEN_H } = Dimensions.get("window");
 
 const SAMPLE_SLOTS = [
   { start: "07:30", end: "08:30", label: "Center Court (Clay)" },
@@ -29,6 +28,7 @@ const SAMPLE_SLOTS = [
 ];
 
 export default function FacilityDetailScreen() {
+  const { isPhone, isTablet, isDesktop, isWide } = useResponsive();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { tap, confirm, success } = useHaptics();
@@ -171,6 +171,7 @@ export default function FacilityDetailScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
+        <ResponsiveContainer maxWidth={1040} noPadding>
         {/* Header Hero Area */}
         <View
           style={{
@@ -610,6 +611,7 @@ export default function FacilityDetailScreen() {
           </Text>
           <TimetableCard timetable={facility.timetable} />
         </View>
+        </ResponsiveContainer>
       </ScrollView>
 
       {/* ─── Modal 1: Choice Dialog when clicking "Web" ─── */}

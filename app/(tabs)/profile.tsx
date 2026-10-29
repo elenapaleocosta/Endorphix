@@ -17,6 +17,8 @@ import { useOnboardingStore } from "@/store/onboarding.store";
 import { useEnergyWave } from "@/hooks/useEnergy";
 import { useHaptics } from "@/hooks/useHaptics";
 import { EnergyWaveChart } from "@/components/EnergyWaveChart";
+import { ResponsiveContainer } from "@/components/ResponsiveContainer";
+import { useResponsive } from "@/hooks/useResponsive";
 import { showAlert } from "@/lib/alert";
 import { Colors, Spacing } from "@/constants";
 
@@ -70,6 +72,7 @@ function StatTile({
 }
 
 export default function ProfileScreen() {
+  const { isPhone, isTablet, isDesktop, isWide } = useResponsive();
   const router = useRouter();
   const { tap, confirm, selection, success, error: errorHaptic } = useHaptics();
   const { user, updateUserProfile, signOut } = useAuthStore();
@@ -171,6 +174,7 @@ export default function ProfileScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        <ResponsiveContainer maxWidth={920} noPadding>
         {/* Top Header */}
         <MotiView
           from={{ opacity: 0, translateY: -10 }}
@@ -469,33 +473,35 @@ export default function ProfileScreen() {
 
         {/* ─── Lifetime Metric Tiles ─── */}
         <View style={{ paddingHorizontal: Spacing.xl, marginBottom: 18 }}>
-          <View style={{ flexDirection: "row", gap: 10, marginBottom: 10 }}>
-            <StatTile
-              label="CURRENT STREAK"
-              value={`${user?.streak_current ?? 9}d`}
-              sublabel="Active Cadence"
-              accent={Colors.olive}
-            />
-            <StatTile
-              label="LONGEST STREAK"
-              value={`${user?.streak_longest ?? 24}d`}
-              sublabel="Personal Best"
-              accent={Colors.navy}
-            />
-          </View>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <StatTile
-              label="TOTAL SESSIONS"
-              value={user?.lifetime_sessions ?? 48}
-              sublabel="Lifetime Moved"
-              accent={Colors.camel}
-            />
-            <StatTile
-              label="PEAK ENDORPHIN"
-              value="98/100"
-              sublabel="Flow State High"
-              accent={Colors.terracotta}
-            />
+          <View style={{ flexDirection: isWide ? "row" : "column", gap: 10 }}>
+            <View style={{ flexDirection: "row", gap: 10, flex: 1 }}>
+              <StatTile
+                label="CURRENT STREAK"
+                value={`${user?.streak_current ?? 9}d`}
+                sublabel="Active Cadence"
+                accent={Colors.olive}
+              />
+              <StatTile
+                label="LONGEST STREAK"
+                value={`${user?.streak_longest ?? 24}d`}
+                sublabel="Personal Best"
+                accent={Colors.navy}
+              />
+            </View>
+            <View style={{ flexDirection: "row", gap: 10, flex: 1 }}>
+              <StatTile
+                label="TOTAL SESSIONS"
+                value={user?.lifetime_sessions ?? 48}
+                sublabel="Lifetime Moved"
+                accent={Colors.camel}
+              />
+              <StatTile
+                label="PEAK ENDORPHIN"
+                value="98/100"
+                sublabel="Flow State High"
+                accent={Colors.terracotta}
+              />
+            </View>
           </View>
         </View>
 
@@ -688,6 +694,7 @@ export default function ProfileScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+        </ResponsiveContainer>
       </ScrollView>
     </View>
   );

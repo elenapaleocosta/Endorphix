@@ -15,6 +15,8 @@ import { MotiView } from "moti";
 import { useAuthStore, DEFAULT_AVATAR } from "@/store/auth.store";
 import { useHaptics } from "@/hooks/useHaptics";
 import { showAlert } from "@/lib/alert";
+import { ResponsiveContainer } from "@/components/ResponsiveContainer";
+import { useResponsive } from "@/hooks/useResponsive";
 import { Colors, Spacing } from "@/constants";
 
 const AVATAR_PRESETS = [
@@ -25,6 +27,7 @@ const AVATAR_PRESETS = [
 ];
 
 export default function EditProfileScreen() {
+  const { isPhone, isTablet, isDesktop } = useResponsive();
   const router = useRouter();
   const { tap, success, error: errorHaptic, selection } = useHaptics();
   const { user, updateUserProfile } = useAuthStore();
@@ -159,6 +162,7 @@ export default function EditProfileScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        <ResponsiveContainer maxWidth={640} noPadding>
         {/* Top Navigation Bar: Cancel & Save Changes */}
         <View
           style={{
@@ -446,6 +450,7 @@ export default function EditProfileScreen() {
             Discard & Return
           </Text>
         </TouchableOpacity>
+        </ResponsiveContainer>
       </ScrollView>
     </View>
   );

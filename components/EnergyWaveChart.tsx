@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { View, Text, Dimensions, Platform } from "react-native";
+import React, { useMemo, useState } from "react";
+import { View, Text, useWindowDimensions, Platform } from "react-native";
 import Svg, {
   Path,
   Circle,
@@ -9,8 +9,6 @@ import Svg, {
 import { Colors } from "@/constants";
 import type { EnergyWaveDataPoint } from "@/types";
 
-const { width: SCREEN_W } = Dimensions.get("window");
-const CHART_WIDTH = Math.max(SCREEN_W - 48, 280);
 const CHART_HEIGHT = 160;
 const PADDING_TOP = 20;
 const PADDING_BOTTOM = 30;
@@ -22,6 +20,12 @@ interface EnergyWaveChartProps {
 }
 
 export function EnergyWaveChart({ data, activeStreak = 7 }: EnergyWaveChartProps) {
+  const { width: windowWidth } = useWindowDimensions();
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+
+  // Dynamic width that adapts to exact layout or window
+  const effectiveWidth = Math.max(containerWidth > 0 ? containerWidth - 32 : windowWidth - 64, 280);
+
   if (!data || data.length === 0) {
     return (
       <View
@@ -43,9 +47,9 @@ export function EnergyWaveChart({ data, activeStreak = 7 }: EnergyWaveChartProps
     );
   }
 
-  // Calculate coordinates for SVG curve
+  // Calculate coordinates for SVG curve dynamically based on effectiveWidth
   const { pathD, fillD, points, peakPoint, averageScore } = useMemo(() => {
-    const usableW = CHART_WIDTH - PADDING_HORIZONTAL * 2;
+    const usableW = Math.max(effectiveWidth - PADDING_HORIZONTAL * 2, 200);
     const usableH = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
 
     const pts = data.map((d, index) => {
@@ -85,10 +89,16 @@ export function EnergyWaveChart({ data, activeStreak = 7 }: EnergyWaveChartProps
     );
 
     return { pathD: curveD, fillD: areaD, points: pts, peakPoint: peak, averageScore: avg };
-  }, [data]);
+  }, [data, effectiveWidth]);
 
   return (
     <View
+      onLayout={(e) => {
+        const layoutW = e.nativeEvent.layout.width;
+        if (layoutW && layoutW > 0 && Math.abs(layoutW - containerWidth) > 2) {
+          setContainerWidth(layoutW);
+        }
+      }}
       style={{
         backgroundColor: Colors.sand,
         borderRadius: 18,
@@ -96,6 +106,7 @@ export function EnergyWaveChart({ data, activeStreak = 7 }: EnergyWaveChartProps
         borderColor: Colors.sandDark,
         padding: 16,
         overflow: "hidden",
+        width: "100%",
       }}
     >
       {/* Top Header Row with Streak & Metric Pill */}
@@ -157,13 +168,13 @@ export function EnergyWaveChart({ data, activeStreak = 7 }: EnergyWaveChartProps
       <View
         className="cursor-energy-wave"
         style={[
-          { alignSelf: "center" },
+          { alignSelf: "center", width: effectiveWidth },
           Platform.OS === "web" && ({
             cursor: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='4.5' stroke='%235A6738' stroke-width='1.5' fill='%235A6738' fill-opacity='0.18'/%3E%3Cline x1='12' y1='2' x2='12' y2='6' stroke='%235A6738' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='12' y1='18' x2='12' y2='22' stroke='%235A6738' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='2' y1='12' x2='6' y2='12' stroke='%235A6738' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='18' y1='12' x2='22' y2='12' stroke='%235A6738' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, crosshair`,
           } as any),
         ]}
       >
-        <Svg width={CHART_WIDTH - 32} height={CHART_HEIGHT}>
+        <Svg width={effectiveWidth} height={CHART_HEIGHT}>
           {/* Reference Level Grid Lines (25, 50, 75) */}
           {[25, 50, 75].map((lvl) => {
             const usableH = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
@@ -173,7 +184,7 @@ export function EnergyWaveChart({ data, activeStreak = 7 }: EnergyWaveChartProps
                 key={lvl}
                 x1={PADDING_HORIZONTAL}
                 y1={y}
-                x2={CHART_WIDTH - PADDING_HORIZONTAL}
+                x2={effectiveWidth - PADDING_HORIZONTAL}
                 y2={y}
                 stroke={Colors.sandDark}
                 strokeWidth={1}

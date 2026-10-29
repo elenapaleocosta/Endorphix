@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { Colors } from "@/constants";
+import { useResponsive } from "@/hooks/useResponsive";
 import type { Booking, SportCategory } from "@/types";
 
 interface SportAthleticStatsProps {
@@ -192,6 +193,7 @@ export function SportAthleticStats({
   selectedSport,
   onSelectSport,
 }: SportAthleticStatsProps) {
+  const { isWide } = useResponsive();
   const [activeTimeframe, setActiveTimeframe] = useState<Timeframe>("all");
 
   const now = Date.now();
@@ -520,8 +522,8 @@ export function SportAthleticStats({
         INDIVIDUAL SPORT ORDERS & TASK METRICS
       </Text>
 
-      <View style={{ gap: 8 }}>
-        {sportsStats.slice(0, 7).map((item) => {
+      <View style={{ flexDirection: isWide ? "row" : "column", flexWrap: "wrap", justifyContent: "space-between", gap: 10 }}>
+        {sportsStats.slice(0, 8).map((item) => {
           const isSelected = selectedSport === item.sportKey;
           return (
             <TouchableOpacity
@@ -534,6 +536,7 @@ export function SportAthleticStats({
                 padding: 12,
                 borderWidth: 1,
                 borderColor: isSelected ? Colors.olive : Colors.sandDark,
+                width: isWide ? "48.8%" : "100%",
               }}
             >
               {/* Row 1: Sport Name and Order Counts Across Intervals */}

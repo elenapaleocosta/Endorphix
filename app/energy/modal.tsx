@@ -14,6 +14,8 @@ import { useAuthStore } from "@/store/auth.store";
 import { useLogEnergy } from "@/hooks/useEnergy";
 import { useHaptics } from "@/hooks/useHaptics";
 import { showAlert } from "@/lib/alert";
+import { ResponsiveContainer } from "@/components/ResponsiveContainer";
+import { useResponsive } from "@/hooks/useResponsive";
 import { Colors, Spacing } from "@/constants";
 
 function getSomaticState(score: number): { label: string; color: string; desc: string } {
@@ -53,6 +55,7 @@ function getSomaticState(score: number): { label: string; color: string; desc: s
 }
 
 export default function AfterActivityEnergyModal() {
+  const { isPhone, isTablet, isDesktop } = useResponsive();
   const router = useRouter();
   const params = useLocalSearchParams<{ bookingId?: string }>();
   const { selection, success, error: errorHaptic, confirm, tap } = useHaptics();
@@ -137,6 +140,7 @@ export default function AfterActivityEnergyModal() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        <ResponsiveContainer maxWidth={640} noPadding>
         {/* Top Dismiss Bar */}
         <View
           style={{
@@ -519,6 +523,7 @@ export default function AfterActivityEnergyModal() {
             </Text>
           </TouchableOpacity>
         </View>
+        </ResponsiveContainer>
       </ScrollView>
     </View>
   );

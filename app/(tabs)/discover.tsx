@@ -18,6 +18,8 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { FacilityCard } from "@/components/FacilityCard";
 import { SearchModeToggle } from "@/components/SearchModeToggle";
 import { SportAthleticStats } from "@/components/SportAthleticStats";
+import { ResponsiveContainer } from "@/components/ResponsiveContainer";
+import { useResponsive } from "@/hooks/useResponsive";
 import { Colors, Spacing, MAX_RADIUS_KM } from "@/constants";
 import { MACRO_REALMS, type SportCategory, type MacroRealm, type TourPlan } from "@/types";
 import { generateDestinationActionPackages } from "@/lib/geo-services";
@@ -46,6 +48,7 @@ const ALL_SPORTS: { label: string; value: SportCategory; icon: string; realm: Ma
 ];
 
 export default function DiscoverScreen() {
+  const { isPhone, isTablet, isDesktop } = useResponsive();
   const router = useRouter();
   const { tap, selection, success } = useHaptics();
   const { userLocation } = useLocationStore();
@@ -125,6 +128,7 @@ export default function DiscoverScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        <ResponsiveContainer maxWidth={1180} noPadding>
         {/* Brand Header */}
         <MotiView
           from={{ opacity: 0, translateY: -10 }}
@@ -448,16 +452,19 @@ export default function DiscoverScreen() {
                   </Text>
                 </View>
               ) : facilities && facilities.length > 0 ? (
-                facilities.map((fac) => (
-                  <FacilityCard
-                    key={fac.id}
-                    facility={fac}
-                    onPress={() => {
-                      tap();
-                      router.push(`/facility/${fac.id}`);
-                    }}
-                  />
-                ))
+                <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 14 }}>
+                  {facilities.map((fac) => (
+                    <View key={fac.id} style={{ width: isPhone ? "100%" : isTablet ? "48.5%" : "32%" }}>
+                      <FacilityCard
+                        facility={fac}
+                        onPress={() => {
+                          tap();
+                          router.push(`/facility/${fac.id}`);
+                        }}
+                      />
+                    </View>
+                  ))}
+                </View>
               ) : (
                 <View
                   style={{
@@ -664,7 +671,9 @@ export default function DiscoverScreen() {
                   </View>
                 </View>
 
+                <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 14 }}>
                 {generatedPlan.tour_days.map((day) => (
+                  <View key={day.day} style={{ width: isPhone ? "100%" : "48.5%" }}>
                   <View
                     key={day.day}
                     style={{
@@ -783,11 +792,14 @@ export default function DiscoverScreen() {
                       </View>
                     ))}
                   </View>
+                  </View>
                 ))}
+                </View>
               </MotiView>
             )}
           </View>
         )}
+        </ResponsiveContainer>
       </ScrollView>
     </View>
   );

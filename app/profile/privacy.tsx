@@ -14,9 +14,12 @@ import { useBookingStore } from "@/store/booking.store";
 import { useEnergyLogs, useEnergyWave } from "@/hooks/useEnergy";
 import { useHaptics } from "@/hooks/useHaptics";
 import { showAlert } from "@/lib/alert";
+import { ResponsiveContainer } from "@/components/ResponsiveContainer";
+import { useResponsive } from "@/hooks/useResponsive";
 import { Colors, Spacing } from "@/constants";
 
 export default function PrivacyScreen() {
+  const { isPhone, isTablet, isDesktop } = useResponsive();
   const router = useRouter();
   const { tap, selection, confirm, success, error: errorHaptic } = useHaptics();
   const { user, privacy, setPrivacy, deleteAccount } = useAuthStore();
@@ -120,6 +123,7 @@ export default function PrivacyScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        <ResponsiveContainer maxWidth={640} noPadding>
         {/* Header */}
         <View
           style={{
@@ -325,6 +329,7 @@ export default function PrivacyScreen() {
             </TouchableOpacity>
           </View>
         </MotiView>
+        </ResponsiveContainer>
       </ScrollView>
     </View>
   );

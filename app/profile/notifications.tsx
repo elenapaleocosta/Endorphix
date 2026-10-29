@@ -12,6 +12,8 @@ import { MotiView } from "moti";
 import { useAuthStore } from "@/store/auth.store";
 import { useHaptics } from "@/hooks/useHaptics";
 import { showAlert } from "@/lib/alert";
+import { ResponsiveContainer } from "@/components/ResponsiveContainer";
+import { useResponsive } from "@/hooks/useResponsive";
 import { Colors, Spacing } from "@/constants";
 
 interface NotificationRowProps {
@@ -85,6 +87,7 @@ function NotificationRow({
 }
 
 export default function NotificationsScreen() {
+  const { isPhone, isTablet, isDesktop } = useResponsive();
   const router = useRouter();
   const { tap, selection, success } = useHaptics();
   const { notifications, setNotifications } = useAuthStore();
@@ -117,6 +120,7 @@ export default function NotificationsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        <ResponsiveContainer maxWidth={640} noPadding>
         {/* Header */}
         <View
           style={{
@@ -253,6 +257,7 @@ export default function NotificationsScreen() {
             Save Notification Preferences →
           </Text>
         </TouchableOpacity>
+        </ResponsiveContainer>
       </ScrollView>
     </View>
   );

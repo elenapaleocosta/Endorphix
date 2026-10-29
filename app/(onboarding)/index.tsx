@@ -2,8 +2,8 @@ import React, { useRef } from "react";
 import {
   View,
   Text,
-  Dimensions,
   TouchableOpacity,
+  useWindowDimensions,
   FlatList,
   type ListRenderItemInfo,
   Platform,
@@ -20,8 +20,6 @@ import { MotiView } from "moti";
 import { useOnboardingStore } from "@/store/onboarding.store";
 import { useHaptics } from "@/hooks/useHaptics";
 import { Colors, Spacing, BRAND_PHILOSOPHY } from "@/constants";
-
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
 interface Slide {
   id: string;
@@ -78,6 +76,7 @@ const AnimatedFlatList = Animated.createAnimatedComponent(
 );
 
 export default function OnboardingScreen() {
+  const { width: SCREEN_W, height: SCREEN_H } = useWindowDimensions();
   const router = useRouter();
   const { completeFTUE, setSlide, currentSlide } = useOnboardingStore();
   const { tap, success } = useHaptics();
@@ -115,9 +114,11 @@ export default function OnboardingScreen() {
           width: SCREEN_W,
           paddingHorizontal: Spacing.xl,
           justifyContent: "center",
+          alignItems: "center",
           paddingBottom: 80,
         }}
       >
+        <View style={{ width: "100%", maxWidth: 580 }}>
         <MotiView
           from={{ opacity: 0, translateY: 16 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -203,6 +204,7 @@ export default function OnboardingScreen() {
             {item.subtitle}
           </Text>
         </MotiView>
+        </View>
       </View>
     );
   };
@@ -273,6 +275,9 @@ export default function OnboardingScreen() {
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
+          maxWidth: 600,
+          width: "100%",
+          alignSelf: "center",
         }}
       >
         {/* Pagination Dots */}

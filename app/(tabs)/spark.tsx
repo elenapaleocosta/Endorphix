@@ -6,8 +6,9 @@ import {
   TouchableOpacity,
   Platform,
   Linking,
-  Dimensions,
 } from "react-native";
+import { ResponsiveContainer } from "@/components/ResponsiveContainer";
+import { useResponsive } from "@/hooks/useResponsive";
 import { useRouter } from "expo-router";
 import { MotiView } from "moti";
 import { useLocationStore } from "@/store/location.store";
@@ -16,9 +17,8 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { Colors, Spacing } from "@/constants";
 import type { Facility } from "@/types";
 
-const { width: SCREEN_W } = Dimensions.get("window");
-
 export default function SparkScreen() {
+  const { isPhone, isTablet, isDesktop } = useResponsive();
   const router = useRouter();
   const { heavy, success, tap } = useHaptics();
   const { userLocation } = useLocationStore();
@@ -67,6 +67,7 @@ export default function SparkScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        <ResponsiveContainer maxWidth={760}>
         {/* Header */}
         <MotiView
           from={{ opacity: 0, translateY: -12 }}
@@ -450,6 +451,7 @@ export default function SparkScreen() {
             </View>
           </MotiView>
         )}
+        </ResponsiveContainer>
       </ScrollView>
     </View>
   );

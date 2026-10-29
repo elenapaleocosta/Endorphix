@@ -118,6 +118,7 @@ export default function SignUpScreen() {
         }}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={{ width: "100%", maxWidth: 460, alignSelf: "center" }}>
         <MotiView
           from={{ opacity: 0, translateY: 20 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -416,6 +417,7 @@ export default function SignUpScreen() {
             </Link>
           </View>
         </MotiView>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

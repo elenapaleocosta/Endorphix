@@ -3,6 +3,7 @@ import { View, Text, Platform } from "react-native";
 import { Colors } from "@/constants";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useLocation } from "@/hooks/useLocation";
+import { useResponsive } from "@/hooks/useResponsive";
 
 // ─── Custom Tab Icon ──────────────────────────────────────────────────────────
 
@@ -53,9 +54,12 @@ function TabIcon({
 
 export default function TabsLayout() {
   const { tap } = useHaptics();
+  const { isWide, width } = useResponsive();
 
   // Watch location coordinates at root tab level
   useLocation();
+
+  const tabWidth = Math.min(width - 32, 600);
 
   return (
     <Tabs
@@ -65,9 +69,25 @@ export default function TabsLayout() {
           backgroundColor: Colors.chalk,
           borderTopColor: Colors.sandDark,
           borderTopWidth: 1,
-          height: Platform.OS === "ios" ? 88 : 70,
+          height: Platform.OS === "ios" ? 88 : isWide ? 74 : 70,
           paddingTop: 6,
-          paddingBottom: Platform.OS === "ios" ? 28 : 12,
+          paddingBottom: Platform.OS === "ios" ? 28 : isWide ? 10 : 12,
+          ...(isWide
+            ? {
+                position: "absolute",
+                bottom: 16,
+                left: Math.max(0, (width - tabWidth) / 2),
+                width: tabWidth,
+                borderRadius: 24,
+                borderWidth: 1,
+                borderColor: Colors.sandDark,
+                shadowColor: "#2B1F17",
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.12,
+                shadowRadius: 16,
+                elevation: 8,
+              }
+            : {}),
         },
         tabBarActiveTintColor: Colors.olive,
         tabBarInactiveTintColor: Colors.espressoMuted,
