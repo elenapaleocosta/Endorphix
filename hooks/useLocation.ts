@@ -25,7 +25,8 @@ export function useDeviceLocation() {
 
     async function locate() {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        // On web an unanswered permission prompt never settles, which would leave every venue list loading.
+        const { status } = await withTimeout(Location.requestForegroundPermissionsAsync(), LOCATE_TIMEOUT_MS);
         if (status !== "granted") throw new Error("Location permission denied");
 
         const current = await withTimeout(

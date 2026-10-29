@@ -1,6 +1,7 @@
 // ─── OpenStreetMap (Overpass API) service layer with curated fallback ─────────
 // Type-safe external data binding with robust fallback handling.
 
+import { FALLBACK_LOCATION } from "@/constants";
 import { sportLabel } from "@/utils";
 import type { Facility, GeoPoint, SportCategory, MacroRealm, TourPlan } from "@/types";
 
@@ -473,105 +474,121 @@ export async function queryOsmOverpassFacilities(
 
   const query = `[out:json][timeout:5];(${tagFilters});out center 15;`;
 
-  // 3. Query with endpoint mirror failover (kumi.systems, lz4, de)
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4500);
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `data=${encodeURIComponent(query)}`,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        continue; // Try next mirror if this one returns 502 or 429
-      }
-
-      const data = await response.json();
-      const elements: any[] = data?.elements || [];
-
-      if (elements.length === 0) {
-        return getFilteredCuratedFacilities(origin, radiusMeters, sportFilter);
-      }
-
-      // Map Overpass nodes to Facility format
-      const parsedFacilities: Facility[] = elements
-        .filter((el) => el.tags && (el.tags.name || el.tags["name:en"]))
-        .slice(0, 15)
-        .map((el, idx) => {
-          const itemLat = el.lat || el.center?.lat || lat;
-          const itemLng = el.lon || el.center?.lon || lng;
-          const distance = calculateHaversineDistance(origin, {
-            latitude: itemLat,
-            longitude: itemLng,
-          });
-
-          const name = el.tags.name || el.tags["name:en"] || `Athletic Ground ${idx + 1}`;
-          const sportTag = (el.tags.sport || el.tags.leisure || "").toLowerCase();
-
-          let macro: MacroRealm = "land";
-          let sports: SportCategory[] = ["gym", "running"];
-
-          if (sportTag.includes("swim") || sportTag.includes("water") || sportTag.includes("row")) {
-            macro = "water";
-            sports = ["swimming"];
-          } else if (sportTag.includes("climb") || sportTag.includes("hike") || sportTag.includes("trail")) {
-            macro = "mountain";
-            sports = ["climbing"];
-          } else if (sportTag.includes("tennis") || sportTag.includes("racket") || sportTag.includes("padel")) {
-            macro = "land";
-            sports = ["tennis"];
-          }
-
-          const address = [
-            [el.tags["addr:street"], el.tags["addr:housenumber"]].filter(Boolean).join(" "),
-            el.tags["addr:city"],
-          ]
-            .filter(Boolean)
-            .join(", ");
-
-          return {
-            id: `osm-${el.id ?? idx}`,
-            name,
-            description: el.tags.description,
-            address,
-            location: { latitude: itemLat, longitude: itemLng },
-            distance_meters: distance,
-            macro_realm: macro,
-            primary_sports: sports,
-            secondary_sports: [],
-            rating: 0,
-            review_count: 0,
-            timetable: {},
-            phone: el.tags.phone,
-            website: el.tags.website,
-            images: [],
-            osm_id: String(el.id),
-            verified_source: "osm_overpass",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-        });
-
-      // Combine with curated facilities
-      const combined = [...parsedFacilities, ...withDistanceFrom(origin, CURATED_HERITAGE_FACILITIES)];
-      const result = filterAndSortFacilities(combined, radiusMeters, sportFilter);
-
-      // Save to cache
-      overpassCache.set(cacheKey, { timestamp: Date.now(), facilities: result });
-      return result;
-    } catch {
-      // Continue to next mirror
-      continue;
-    }
+  // 3. Query all mirrors at once; fall back to curated venues if none answers in time
+  let elements: any[];
+  try {
+    elements = await fetchOverpassElements(query);
+  } catch {
+    return getFilteredCuratedFacilities(origin, radiusMeters, sportFilter);
+  }
+  if (elements.length === 0) {
+    return getFilteredCuratedFacilities(origin, radiusMeters, sportFilter);
   }
 
-  // Fallback: If all Overpass mirrors fail or return 502/timeout, return curated venues
-  return getFilteredCuratedFacilities(origin, radiusMeters, sportFilter);
+  // Map Overpass nodes to Facility format
+  const parsedFacilities: Facility[] = elements
+    .filter((el) => el.tags && (el.tags.name || el.tags["name:en"]))
+    .slice(0, 15)
+    .map((el, idx) => {
+      const itemLat = el.lat || el.center?.lat || lat;
+      const itemLng = el.lon || el.center?.lon || lng;
+      const distance = calculateHaversineDistance(origin, {
+        latitude: itemLat,
+        longitude: itemLng,
+      });
+
+      const name = el.tags.name || el.tags["name:en"] || `Athletic Ground ${idx + 1}`;
+      const sportTag = (el.tags.sport || el.tags.leisure || "").toLowerCase();
+
+      let macro: MacroRealm = "land";
+      let sports: SportCategory[] = ["gym", "running"];
+
+      if (sportTag.includes("swim") || sportTag.includes("water") || sportTag.includes("row")) {
+        macro = "water";
+        sports = ["swimming"];
+      } else if (sportTag.includes("climb") || sportTag.includes("hike") || sportTag.includes("trail")) {
+        macro = "mountain";
+        sports = ["climbing"];
+      } else if (sportTag.includes("tennis") || sportTag.includes("racket") || sportTag.includes("padel")) {
+        macro = "land";
+        sports = ["tennis"];
+      }
+
+      const address = [
+        [el.tags["addr:street"], el.tags["addr:housenumber"]].filter(Boolean).join(" "),
+        el.tags["addr:city"],
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      return {
+        id: `osm-${el.id ?? idx}`,
+        name,
+        description: el.tags.description,
+        address,
+        location: { latitude: itemLat, longitude: itemLng },
+        distance_meters: distance,
+        macro_realm: macro,
+        primary_sports: sports,
+        secondary_sports: [],
+        rating: 0,
+        review_count: 0,
+        timetable: {},
+        phone: el.tags.phone,
+        website: el.tags.website,
+        images: [],
+        osm_id: String(el.id),
+        verified_source: "osm_overpass",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    });
+
+  // Combine with curated facilities
+  const combined = [...parsedFacilities, ...curatedAround(origin)];
+  const result = filterAndSortFacilities(combined, radiusMeters, sportFilter);
+
+  // Save to cache
+  overpassCache.set(cacheKey, { timestamp: Date.now(), facilities: result });
+  return result;
+}
+
+const OVERPASS_TIMEOUT_MS = 6000;
+
+/** Resolves with the first mirror that answers, so one slow or rate-limited mirror can't stall the list. */
+async function fetchOverpassElements(query: string): Promise<any[]> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OVERPASS_TIMEOUT_MS);
+  try {
+    return await firstFulfilled(
+      OVERPASS_ENDPOINTS.map(async (endpoint) => {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `data=${encodeURIComponent(query)}`,
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`Overpass responded ${response.status}`);
+        const data = await response.json();
+        return (data?.elements ?? []) as any[];
+      }),
+    );
+  } finally {
+    clearTimeout(timeoutId);
+    controller.abort();
+  }
+}
+
+function firstFulfilled<T>(promises: Promise<T>[]): Promise<T> {
+  return new Promise((resolve, reject) => {
+    let pending = promises.length;
+    for (const promise of promises) {
+      promise.then(resolve, () => {
+        pending -= 1;
+        if (pending === 0) reject(new Error("All Overpass mirrors failed"));
+      });
+    }
+  });
 }
 
 /**
@@ -582,18 +599,27 @@ export function getFilteredCuratedFacilities(
   radiusMeters: number = 50000,
   sportFilter?: SportCategory | MacroRealm
 ): Facility[] {
-  return filterAndSortFacilities(
-    withDistanceFrom(origin, CURATED_HERITAGE_FACILITIES),
-    radiusMeters,
-    sportFilter,
-  );
+  return filterAndSortFacilities(curatedAround(origin), radiusMeters, sportFilter);
 }
 
-function withDistanceFrom(origin: GeoPoint, facilities: Facility[]): Facility[] {
-  return facilities.map((fac) => ({
-    ...fac,
-    distance_meters: calculateHaversineDistance(origin, fac.location),
-  }));
+/**
+ * The curated set is laid out around FALLBACK_LOCATION. Shift it so the same layout sits
+ * around the user, keeping each venue's distance and bearing; otherwise users outside
+ * Athens would get no curated venues at all (and so nothing for the Spark).
+ */
+function curatedAround(origin: GeoPoint): Facility[] {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const anchorCos = Math.cos(toRad(FALLBACK_LOCATION.latitude));
+  const originCos = Math.cos(toRad(origin.latitude));
+
+  return CURATED_HERITAGE_FACILITIES.map((fac) => {
+    const location = {
+      latitude: origin.latitude + (fac.location.latitude - FALLBACK_LOCATION.latitude),
+      longitude:
+        origin.longitude + ((fac.location.longitude - FALLBACK_LOCATION.longitude) * anchorCos) / originCos,
+    };
+    return { ...fac, location, distance_meters: calculateHaversineDistance(origin, location) };
+  });
 }
 
 function filterAndSortFacilities(
