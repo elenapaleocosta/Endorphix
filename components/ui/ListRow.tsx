@@ -20,12 +20,12 @@ interface ListRowProps {
 export function ListRow({ title, subtitle, icon, trailing, onPress, last = false }: ListRowProps) {
   const content = (
     <>
-      {icon ? <Ionicons name={icon} size={20} color={Colors.inkMuted} /> : null}
+      {icon ? <Ionicons name={icon} size={20} color={Colors.fgMuted} /> : null}
       <View className="min-w-0 flex-1">
-        <Text className="text-base font-semibold text-ink">{title}</Text>
-        {subtitle ? <Text className="mt-0.5 text-sm leading-5 text-ink-muted">{subtitle}</Text> : null}
+        <Text className="text-base font-semibold text-fg">{title}</Text>
+        {subtitle ? <Text className="mt-0.5 text-sm leading-5 text-fg-muted">{subtitle}</Text> : null}
       </View>
-      {trailing ?? (onPress ? <Ionicons name="chevron-forward" size={18} color={Colors.inkMuted} /> : null)}
+      {trailing ?? (onPress ? <Ionicons name="chevron-forward" size={18} color={Colors.fgMuted} /> : null)}
     </>
   );
 
@@ -42,7 +42,7 @@ export function ListRow({ title, subtitle, icon, trailing, onPress, last = false
         haptics.tap();
         onPress();
       }}
-      className={`${rowClass} active:bg-paper`}
+      className={`${rowClass} active:bg-raised`}
     >
       {content}
     </Pressable>

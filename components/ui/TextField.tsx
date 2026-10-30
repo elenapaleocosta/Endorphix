@@ -14,25 +14,25 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
 ) {
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-semibold text-ink">{label}</Text>
+      <Text className="text-sm font-semibold text-fg">{label}</Text>
       <TextInput
         ref={ref}
         accessibilityLabel={label}
         accessibilityHint={error ?? hint}
-        placeholderTextColor={Colors.inkFaint}
+        placeholderTextColor={Colors.fgFaint}
         multiline={multiline}
         textAlignVertical={multiline ? "top" : "center"}
-        className={`rounded-xl border bg-paper px-4 py-3 text-base text-ink ${
+        className={`rounded-xl border bg-raised px-4 py-3 text-base text-fg ${
           multiline ? "min-h-24" : "min-h-12"
-        } ${error ? "border-terracotta" : "border-line"}`}
+        } ${error ? "border-danger" : "border-line"}`}
         {...inputProps}
       />
       {error ? (
-        <Text accessibilityLiveRegion="polite" className="text-sm font-medium text-terracotta">
+        <Text accessibilityLiveRegion="polite" className="text-sm font-medium text-danger">
           {error}
         </Text>
       ) : hint ? (
-        <Text className="text-sm text-ink-muted">{hint}</Text>
+        <Text className="text-sm text-fg-muted">{hint}</Text>
       ) : null}
     </View>
   );

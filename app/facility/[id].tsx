@@ -96,16 +96,16 @@ function FacilityDetail({ facility }: { facility: Facility }) {
         ))}
       </View>
 
-      <Text accessibilityRole="header" className="mt-3 text-3xl font-display text-ink">
+      <Text accessibilityRole="header" className="mt-3 text-3xl font-display text-fg">
         {facility.name}
       </Text>
-      <Text className="mt-1 text-base text-ink-muted">
+      <Text className="mt-1 text-base text-fg-muted">
         {[facility.address, distance ? `${distance} away` : null].filter(Boolean).join(" · ")}
       </Text>
       {rated ? (
         <View className="mt-2 flex-row items-center gap-1">
-          <Ionicons name="star" size={14} color={Colors.olive} />
-          <Text className="text-sm font-semibold text-ink">
+          <Ionicons name="star" size={14} color={Colors.accent} />
+          <Text className="text-sm font-semibold text-fg">
             {facility.rating.toFixed(1)} · {facility.review_count} reviews
           </Text>
         </View>
@@ -136,7 +136,7 @@ function FacilityDetail({ facility }: { facility: Facility }) {
       {facility.description ? (
         <View className="mt-8">
           <SectionHeader title="About" />
-          <Text className="text-base leading-6 text-ink">{facility.description}</Text>
+          <Text className="text-base leading-6 text-fg">{facility.description}</Text>
         </View>
       ) : null}
 
@@ -147,10 +147,10 @@ function FacilityDetail({ facility }: { facility: Facility }) {
             {facility.expand_activities.map((activity) => (
               <Card key={activity.id}>
                 <View className="flex-row items-start justify-between gap-3">
-                  <Text className="min-w-0 flex-1 text-base font-bold text-ink">{activity.title}</Text>
+                  <Text className="min-w-0 flex-1 text-base font-bold text-fg">{activity.title}</Text>
                   <Tag label={`${activity.durationMinutes} min`} />
                 </View>
-                <Text className="mt-1 text-sm leading-5 text-ink-muted">{activity.description}</Text>
+                <Text className="mt-1 text-sm leading-5 text-fg-muted">{activity.description}</Text>
               </Card>
             ))}
           </View>
@@ -182,10 +182,10 @@ function BookingPanel({ facility }: { facility: Facility }) {
     return (
       <Card accent className="gap-3">
         <View className="flex-row items-center gap-2">
-          <Ionicons name="checkmark-circle" size={20} color={Colors.olive} />
-          <Text className="text-base font-bold text-ink">Slot confirmed</Text>
+          <Ionicons name="checkmark-circle" size={20} color={Colors.accent} />
+          <Text className="text-base font-bold text-fg">Slot confirmed</Text>
         </View>
-        <Text className="text-sm leading-5 text-ink-muted">
+        <Text className="text-sm leading-5 text-fg-muted">
           {booking.activity_name}, today {booking.start_time}–{booking.end_time} ({booking.court_or_slot}). Thirty
           minutes after your session we'll ask how high your endorphins are.
         </Text>
@@ -248,13 +248,13 @@ function BookingPanel({ facility }: { facility: Facility }) {
                 setSlotIndex(i);
               }}
               className={`min-h-12 flex-row items-center justify-between rounded-xl border px-4 py-3 ${
-                selected ? "border-olive bg-olive" : "border-line bg-paper"
+                selected ? "border-accent bg-accent" : "border-line bg-raised"
               }`}
             >
-              <Text className={`text-base font-bold ${selected ? "text-chalk" : "text-ink"}`}>
+              <Text className={`text-base font-bold ${selected ? "text-canvas" : "text-fg"}`}>
                 {slot.start} – {slot.end}
               </Text>
-              <Text className={`text-sm ${selected ? "text-chalk" : "text-ink-muted"}`}>{slot.label}</Text>
+              <Text className={`text-sm ${selected ? "text-canvas" : "text-fg-muted"}`}>{slot.label}</Text>
             </Pressable>
           );
         })}

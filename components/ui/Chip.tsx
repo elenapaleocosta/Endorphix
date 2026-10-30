@@ -23,18 +23,18 @@ export function Chip({ label, selected, onPress, sublabel, dotColor, grow = fals
         haptics.selection();
         onPress();
       }}
-      className={`min-h-10 justify-center rounded-xl border px-3.5 py-2 active:opacity-80 ${
-        selected ? "border-olive bg-olive" : "border-line bg-paper"
+      className={`min-h-10 justify-center rounded-xl border px-3.5 py-2 active:scale-[0.98] ${
+        selected ? "border-accent bg-accent" : "border-line bg-raised"
       } ${grow ? "flex-1 items-center" : ""}`}
     >
       <View className="flex-row items-center gap-1.5">
         {dotColor ? <View className="h-2 w-2 rounded-full" style={{ backgroundColor: dotColor }} /> : null}
-        <Text numberOfLines={1} className={`text-sm font-semibold ${selected ? "text-chalk" : "text-ink"}`}>
+        <Text numberOfLines={1} className={`text-sm font-semibold ${selected ? "text-canvas" : "text-fg"}`}>
           {label}
         </Text>
       </View>
       {sublabel ? (
-        <Text numberOfLines={1} className={`mt-0.5 text-2xs ${selected ? "text-chalk/80" : "text-ink-muted"}`}>
+        <Text numberOfLines={1} className={`mt-0.5 text-2xs ${selected ? "text-canvas/80" : "text-fg-muted"}`}>
           {sublabel}
         </Text>
       ) : null}
@@ -65,7 +65,7 @@ export function SegmentedControl<T extends string>({
     <View
       accessibilityRole="tablist"
       accessibilityLabel={accessibilityLabel}
-      className="flex-row rounded-2xl border border-line bg-sand p-1"
+      className="flex-row rounded-2xl border border-line bg-surface p-1"
     >
       {options.map((option) => {
         const selected = option.value === value;
@@ -79,13 +79,13 @@ export function SegmentedControl<T extends string>({
               haptics.selection();
               onChange(option.value);
             }}
-            className={`min-h-12 flex-1 items-center justify-center rounded-xl px-2 py-2 ${selected ? "bg-olive" : ""}`}
+            className={`min-h-12 flex-1 items-center justify-center rounded-xl px-2 py-2 ${selected ? "bg-accent" : ""}`}
           >
-            <Text numberOfLines={1} className={`text-sm font-bold ${selected ? "text-chalk" : "text-ink"}`}>
+            <Text numberOfLines={1} className={`text-sm font-bold ${selected ? "text-canvas" : "text-fg"}`}>
               {option.label}
             </Text>
             {option.hint ? (
-              <Text numberOfLines={1} className={`text-2xs ${selected ? "text-chalk/80" : "text-ink-muted"}`}>
+              <Text numberOfLines={1} className={`text-2xs ${selected ? "text-canvas/80" : "text-fg-muted"}`}>
                 {option.hint}
               </Text>
             ) : null}

@@ -183,8 +183,8 @@ function SportFirst() {
 
       {locationStatus === "fallback" ? (
         <View className="mb-3 flex-row items-center gap-2">
-          <Ionicons name="location-outline" size={16} color={Colors.inkMuted} />
-          <Text className="min-w-0 flex-1 text-sm text-ink-muted">
+          <Ionicons name="location-outline" size={16} color={Colors.fgMuted} />
+          <Text className="min-w-0 flex-1 text-sm text-fg-muted">
             Your location is unavailable, so we're showing venues near {FALLBACK_LOCATION_LABEL}.
           </Text>
         </View>
@@ -246,7 +246,7 @@ function DestinationFirst() {
           onSubmitEditing={buildPlan}
         />
         <View className="gap-2">
-          <Text className="text-sm font-semibold text-ink">Length of stay</Text>
+          <Text className="text-sm font-semibold text-fg">Length of stay</Text>
           <View className="flex-row gap-2">
             {STAY_OPTIONS.map((days) => (
               <Chip
@@ -266,7 +266,7 @@ function DestinationFirst() {
       {tourPlan ? (
         <View className="mt-8">
           <SectionHeader title={`${tourPlan.days}-day plan · ${tourPlan.destination}`} />
-          <Text className="-mt-1 mb-2 text-sm text-ink-muted">Sessions are drawn from endorphix partner venues.</Text>
+          <Text className="-mt-1 mb-2 text-sm text-fg-muted">Sessions are drawn from endorphix partner venues.</Text>
           <View className="-mx-2 flex-row flex-wrap">
             {tourPlan.tour_days.map((day) => (
               <View key={day.day} className="w-full p-2 md:w-1/2">
@@ -284,8 +284,8 @@ function TourDayCard({ day }: { day: TourDay }) {
   const router = useRouter();
   return (
     <Card>
-      <Eyebrow tone="olive">Day {day.day}</Eyebrow>
-      <Text className="mt-1 text-lg font-bold text-ink">{day.theme}</Text>
+      <Eyebrow tone="accent">Day {day.day}</Eyebrow>
+      <Text className="mt-1 text-lg font-bold text-fg">{day.theme}</Text>
       <View className="mt-3 gap-3">
         {day.activities.map((activity) => (
           <Pressable
@@ -296,18 +296,18 @@ function TourDayCard({ day }: { day: TourDay }) {
               haptics.tap();
               router.push(`/facility/${activity.facility.id}`);
             }}
-            className="rounded-xl border border-line bg-paper p-3 active:opacity-80"
+            className="rounded-xl border border-line bg-raised p-3 active:scale-[0.98]"
           >
             <View className="flex-row items-start justify-between gap-2">
-              <Text className="min-w-0 flex-1 text-sm font-bold text-ink">{activity.title}</Text>
-              <Tag label={activity.intensity} tone={activity.intensity === "Recovery" ? "neutral" : "terracotta"} />
+              <Text className="min-w-0 flex-1 text-sm font-bold text-fg">{activity.title}</Text>
+              <Tag label={activity.intensity} tone={activity.intensity === "Recovery" ? "neutral" : "highlight"} />
             </View>
-            <Text className="mt-1 text-sm leading-5 text-ink-muted">{activity.description}</Text>
+            <Text className="mt-1 text-sm leading-5 text-fg-muted">{activity.description}</Text>
             <View className="mt-2 flex-row items-center gap-1">
-              <Text numberOfLines={1} className="min-w-0 flex-1 text-sm font-semibold text-olive">
+              <Text numberOfLines={1} className="min-w-0 flex-1 text-sm font-semibold text-accent">
                 {activity.facility.name}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color={Colors.olive} />
+              <Ionicons name="chevron-forward" size={16} color={Colors.accent} />
             </View>
           </Pressable>
         ))}

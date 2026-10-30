@@ -12,8 +12,8 @@ export default function Index() {
 
   if (!authReady || !onboardingReady) {
     return (
-      <View className="flex-1 items-center justify-center bg-chalk">
-        <ActivityIndicator color={Colors.olive} size="large" accessibilityLabel="Loading endorphix" />
+      <View className="flex-1 items-center justify-center bg-canvas">
+        <ActivityIndicator color={Colors.accent} size="large" accessibilityLabel="Loading endorphix" />
       </View>
     );
   }

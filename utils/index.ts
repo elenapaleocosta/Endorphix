@@ -10,11 +10,11 @@ export interface EnergyBand {
 
 /** The Endorphin Bar scale (see platform dossier §3). Ordered high → low. */
 export const ENERGY_BANDS: EnergyBand[] = [
-  { min: 90, label: "Peak vitality high", description: "Transcendent neuromuscular flow and a full endorphin flush.", color: Colors.terracotta },
-  { min: 75, label: "High euphoric flow", description: "Elevated clarity and buoyant lightness.", color: Colors.olive },
-  { min: 50, label: "Active flow state", description: "Clean baseline activation, centred cadence.", color: Colors.camel },
-  { min: 25, label: "Grounded & resetting", description: "Subdued state while tissue conditions.", color: Colors.inkMuted },
-  { min: 1, label: "Somatic depletion", description: "Replenish, hydrate and recover.", color: Colors.inkMuted },
+  { min: 90, label: "Peak vitality high", description: "Transcendent neuromuscular flow and a full endorphin flush.", color: Colors.highlight },
+  { min: 75, label: "High euphoric flow", description: "Elevated clarity and buoyant lightness.", color: Colors.accent },
+  { min: 50, label: "Active flow state", description: "Clean baseline activation, centred cadence.", color: Colors.tint },
+  { min: 25, label: "Grounded & resetting", description: "Subdued state while tissue conditions.", color: Colors.fgMuted },
+  { min: 1, label: "Somatic depletion", description: "Replenish, hydrate and recover.", color: Colors.fgMuted },
 ];
 
 export function energyBand(score: number): EnergyBand {

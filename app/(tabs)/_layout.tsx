@@ -26,8 +26,8 @@ export default function TabsLayout() {
 
   if (!hydrated) {
     return (
-      <View className="flex-1 items-center justify-center bg-chalk">
-        <ActivityIndicator color={Colors.olive} size="large" accessibilityLabel="Loading" />
+      <View className="flex-1 items-center justify-center bg-canvas">
+        <ActivityIndicator color={Colors.accent} size="large" accessibilityLabel="Loading" />
       </View>
     );
   }
@@ -41,8 +41,8 @@ export default function TabsLayout() {
       screenListeners={{ tabPress: () => haptics.selection() }}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.olive,
-        tabBarInactiveTintColor: Colors.inkMuted,
+        tabBarActiveTintColor: Colors.accent,
+        tabBarInactiveTintColor: Colors.fgMuted,
         tabBarLabelStyle: { fontSize: 11, fontWeight: "700" },
         tabBarStyle: wide
           ? {
@@ -56,14 +56,14 @@ export default function TabsLayout() {
               borderRadius: 24,
               borderWidth: 1,
               borderColor: Colors.line,
-              backgroundColor: Colors.chalk,
+              backgroundColor: Colors.canvas,
             }
           : {
               height: TAB_BAR_HEIGHT + insets.bottom,
               paddingTop: 8,
               paddingBottom: insets.bottom + 8,
               borderTopColor: Colors.line,
-              backgroundColor: Colors.chalk,
+              backgroundColor: Colors.canvas,
             },
       }}
     >

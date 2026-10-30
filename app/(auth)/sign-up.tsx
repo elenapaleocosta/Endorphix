@@ -172,7 +172,7 @@ export default function SignUpScreen() {
         {notice ? (
           <Text
             accessibilityRole="alert"
-            className={`text-sm font-medium ${notice.tone === "error" ? "text-terracotta" : "text-ink"}`}
+            className={`text-sm font-medium ${notice.tone === "error" ? "text-danger" : "text-fg"}`}
           >
             {notice.text}
           </Text>
@@ -182,10 +182,10 @@ export default function SignUpScreen() {
       </View>
 
       <View className="mt-6 flex-row flex-wrap items-center justify-center gap-1">
-        <Text className="text-sm text-ink-muted">Already have a passport?</Text>
+        <Text className="text-sm text-fg-muted">Already have a passport?</Text>
         <Link href="/(auth)/sign-in" asChild>
           <Pressable accessibilityRole="link" className="min-h-10 justify-center px-1">
-            <Text className="text-sm font-bold text-olive">Sign in</Text>
+            <Text className="text-sm font-bold text-accent">Sign in</Text>
           </Pressable>
         </Link>
       </View>

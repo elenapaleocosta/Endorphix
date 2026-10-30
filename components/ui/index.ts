@@ -1,4 +1,5 @@
 export { Screen, WIDE_BREAKPOINT, TAB_BAR_HEIGHT } from "./Screen";
+export { Terrain } from "./Terrain";
 export { Button, IconButton } from "./Button";
 export { Chip, SegmentedControl } from "./Chip";
 export { Card, Tag } from "./Surface";

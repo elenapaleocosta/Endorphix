@@ -102,7 +102,7 @@ export default function PrivacyScreen() {
 
       <SectionHeader title="Your data" />
       <Card className="mb-8 gap-3">
-        <Text className="text-sm leading-5 text-ink-muted">
+        <Text className="text-sm leading-5 text-fg-muted">
           Export your profile, bookings and energy logs as a JSON file. No lock-in.
         </Text>
         <Button
@@ -115,7 +115,7 @@ export default function PrivacyScreen() {
         {exportStatus ? (
           <Text
             accessibilityLiveRegion="polite"
-            className={`text-sm font-medium ${exportStatus.tone === "ok" ? "text-ink" : "text-terracotta"}`}
+            className={`text-sm font-medium ${exportStatus.tone === "ok" ? "text-fg" : "text-danger"}`}
           >
             {exportStatus.text}
           </Text>
@@ -124,7 +124,7 @@ export default function PrivacyScreen() {
 
       <SectionHeader title="Erase" />
       <View className="gap-3">
-        <Text className="text-sm leading-5 text-ink-muted">
+        <Text className="text-sm leading-5 text-fg-muted">
           Removes everything endorphix stores on this device and signs you out.
         </Text>
         <Button label="Erase all data" icon="trash-outline" variant="danger" onPress={confirmErase} />

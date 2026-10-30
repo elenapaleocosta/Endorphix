@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants";
+import { Terrain } from "./Terrain";
 
 /** Width ≥ this switches to the tablet/desktop layout (floating tab bar, multi-column grids). */
 export const WIDE_BREAKPOINT = 640;
@@ -35,8 +36,10 @@ export function Screen({ children, width = "regular", inTabs = false, noTopInset
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={{ flex: 1, backgroundColor: Colors.chalk }}
+      style={{ flex: 1, backgroundColor: Colors.canvas }}
     >
+      {/* Fixed behind the scroll view: content glides over the terrain. */}
+      <Terrain />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}

@@ -68,8 +68,8 @@ export default function SignInScreen() {
       />
 
       {!isSupabaseConfigured ? (
-        <Card tone="paper" className="mb-6 gap-3">
-          <Text className="text-sm leading-5 text-ink-muted">
+        <Card tone="raised" className="mb-6 gap-3">
+          <Text className="text-sm leading-5 text-fg-muted">
             Demo mode: no backend is configured, so any email and password open the demo passport.
           </Text>
           <Button
@@ -115,7 +115,7 @@ export default function SignInScreen() {
         />
 
         {formError ? (
-          <Text accessibilityRole="alert" className="text-sm font-medium text-terracotta">
+          <Text accessibilityRole="alert" className="text-sm font-medium text-danger">
             {formError}
           </Text>
         ) : null}
@@ -124,10 +124,10 @@ export default function SignInScreen() {
       </View>
 
       <View className="mt-6 flex-row flex-wrap items-center justify-center gap-1">
-        <Text className="text-sm text-ink-muted">New to endorphix?</Text>
+        <Text className="text-sm text-fg-muted">New to endorphix?</Text>
         <Link href="/(auth)/sign-up" asChild>
           <Pressable accessibilityRole="link" className="min-h-10 justify-center px-1">
-            <Text className="text-sm font-bold text-olive">Create a passport</Text>
+            <Text className="text-sm font-bold text-accent">Create a passport</Text>
           </Pressable>
         </Link>
       </View>

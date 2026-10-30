@@ -51,7 +51,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
         <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.chalk } }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.canvas } }}>
           <Stack.Screen name="index" options={{ animation: "none" }} />
           <Stack.Screen name="(onboarding)" options={{ animation: "fade" }} />
           <Stack.Screen name="(auth)" options={{ animation: "fade" }} />

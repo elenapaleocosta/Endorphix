@@ -23,14 +23,14 @@ export function PostSessionBanner() {
       transition={{ type: "timing", duration: 220 }}
       style={{ position: "absolute", top: insets.top + 8, left: 16, right: 16, zIndex: 50, alignItems: "center" }}
     >
-      <View accessibilityRole="alert" className="w-full max-w-xl gap-3 rounded-2xl bg-ink p-4">
+      <View accessibilityRole="alert" className="w-full max-w-xl gap-3 rounded-2xl bg-fg p-4">
         <View className="flex-row items-start gap-3">
           <View className="min-w-0 flex-1">
-            <Text className="text-2xs font-display uppercase tracking-eyebrow text-sand">30 min post-session</Text>
-            <Text numberOfLines={1} className="mt-1 text-base font-bold text-chalk">
+            <Text className="text-2xs font-display uppercase tracking-eyebrow text-surface">30 min post-session</Text>
+            <Text numberOfLines={1} className="mt-1 text-base font-bold text-canvas">
               {booking.facility_name}
             </Text>
-            <Text className="mt-0.5 text-sm text-sand">
+            <Text className="mt-0.5 text-sm text-surface">
               Your {booking.start_time}–{booking.end_time} {booking.activity_name.toLowerCase()} session is done. How
               high is your endorphin level?
             </Text>

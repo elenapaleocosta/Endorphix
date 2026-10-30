@@ -59,7 +59,7 @@ export default function EnergyModal() {
   const header = (
     <PageHeader
       eyebrow="After-activity check-in"
-      eyebrowTone="terracotta"
+      eyebrowTone="highlight"
       title="The Endorphin Bar"
       accessory={<IconButton icon="close" accessibilityLabel="Close" onPress={close} />}
     />
@@ -85,16 +85,16 @@ export default function EnergyModal() {
       {header}
 
       {booking ? (
-        <Card tone="paper" className="mb-5">
-          <Eyebrow tone="olive">Session finished</Eyebrow>
-          <Text className="mt-1 text-base font-bold text-ink">{booking.facility_name}</Text>
-          <Text className="text-sm text-ink-muted">
+        <Card tone="raised" className="mb-5">
+          <Eyebrow tone="accent">Session finished</Eyebrow>
+          <Text className="mt-1 text-base font-bold text-fg">{booking.facility_name}</Text>
+          <Text className="text-sm text-fg-muted">
             {booking.activity_name} · {booking.start_time}–{booking.end_time} · {booking.court_or_slot}
           </Text>
         </Card>
       ) : null}
 
-      <Text className="mb-5 text-base leading-6 text-ink-muted">
+      <Text className="mb-5 text-base leading-6 text-fg-muted">
         Half an hour after moving, your heart rate settles and endorphins peak. How high do you feel, from 1 to 100?
       </Text>
 
@@ -110,10 +110,10 @@ export default function EnergyModal() {
             onAccessibilityAction={(e) => adjust(score + (e.nativeEvent.actionName === "increment" ? 5 : -5))}
             className="min-w-0 flex-1 items-center"
           >
-            <Text className="text-6xl font-display text-ink">{score}</Text>
+            <Text className="text-6xl font-display text-fg">{score}</Text>
             <View className="mt-1 flex-row items-center gap-1.5">
               <View className="h-2 w-2 rounded-full" style={{ backgroundColor: band.color }} />
-              <Text className="text-sm font-bold text-ink">{band.label}</Text>
+              <Text className="text-sm font-bold text-fg">{band.label}</Text>
             </View>
           </View>
           <IconButton icon="add" accessibilityLabel="Increase by 1" onPress={() => adjust(score + 1)} />
@@ -133,7 +133,7 @@ export default function EnergyModal() {
           ))}
         </View>
 
-        <Text className="text-center text-sm text-ink-muted">{band.description}</Text>
+        <Text className="text-center text-sm text-fg-muted">{band.description}</Text>
       </Card>
 
       <View className="mt-5 gap-4">
@@ -145,7 +145,7 @@ export default function EnergyModal() {
           multiline
         />
         {saveError ? (
-          <Text accessibilityRole="alert" className="text-sm font-medium text-terracotta">
+          <Text accessibilityRole="alert" className="text-sm font-medium text-danger">
             {saveError}
           </Text>
         ) : null}

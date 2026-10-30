@@ -80,7 +80,7 @@ export default function PassportScreen() {
 
   return (
     <Screen inTabs>
-      <Eyebrow tone="olive">Vitality passport</Eyebrow>
+      <Eyebrow tone="accent">Vitality passport</Eyebrow>
 
       <View className="mt-3 flex-row items-center gap-4">
         <Pressable
@@ -94,13 +94,13 @@ export default function PassportScreen() {
           <Avatar user={user} />
         </Pressable>
         <View className="min-w-0 flex-1">
-          <Text accessibilityRole="header" numberOfLines={2} className="text-2xl font-display text-ink">
+          <Text accessibilityRole="header" numberOfLines={2} className="text-2xl font-display text-fg">
             {displayName(user)}
           </Text>
-          {user.nickname ? <Text className="text-sm font-semibold text-ink-muted">“{user.nickname}”</Text> : null}
+          {user.nickname ? <Text className="text-sm font-semibold text-fg-muted">“{user.nickname}”</Text> : null}
         </View>
       </View>
-      {user.bio ? <Text className="mt-3 text-base leading-6 text-ink-muted">{user.bio}</Text> : null}
+      {user.bio ? <Text className="mt-3 text-base leading-6 text-fg-muted">{user.bio}</Text> : null}
 
       <View className="-mx-1.5 mt-4 flex-row flex-wrap">
         <StatTile label="Current streak" value={`${user.streak_current}d`} />
@@ -136,18 +136,18 @@ export default function PassportScreen() {
                   haptics.tap();
                   openLogger(booking.id);
                 }}
-                className="flex-row items-center gap-3 rounded-2xl border border-terracotta/40 bg-terracotta/5 p-4 active:opacity-80"
+                className="flex-row items-center gap-3 rounded-2xl border border-highlight-edge bg-highlight-soft p-4 active:scale-[0.98]"
               >
                 <View className="min-w-0 flex-1">
-                  <Text numberOfLines={1} className="text-base font-bold text-ink">
+                  <Text numberOfLines={1} className="text-base font-bold text-fg">
                     {booking.facility_name}
                   </Text>
-                  <Text className="text-sm text-ink-muted">
+                  <Text className="text-sm text-fg-muted">
                     {booking.activity_name} · {booking.start_time}–{booking.end_time}
                   </Text>
                 </View>
-                <Text className="text-sm font-bold text-terracotta">Rate</Text>
-                <Ionicons name="chevron-forward" size={18} color={Colors.terracotta} />
+                <Text className="text-sm font-bold text-highlight">Rate</Text>
+                <Ionicons name="chevron-forward" size={18} color={Colors.highlight} />
               </Pressable>
             ))}
           </View>
@@ -165,8 +165,8 @@ export default function PassportScreen() {
                 subtitle={`${booking.activity_name} · ${formatSessionDay(booking.date)}`}
                 last={i === history.length - 1}
                 trailing={
-                  <View className="rounded-md bg-olive px-2 py-1">
-                    <Text className="text-sm font-bold text-chalk">{booking.logged_energy_score}</Text>
+                  <View className="rounded-md bg-accent px-2 py-1">
+                    <Text className="text-sm font-bold text-canvas">{booking.logged_energy_score}</Text>
                   </View>
                 }
               />
@@ -190,7 +190,7 @@ export default function PassportScreen() {
               {mix.map((realm) => (
                 <View key={realm.id} className="flex-row items-center gap-1.5">
                   <View className="h-2 w-2 rounded-full" style={{ backgroundColor: realm.accent }} />
-                  <Text className="text-sm text-ink">
+                  <Text className="text-sm text-fg">
                     {realm.label} {Math.round(realm.share * 100)}%
                   </Text>
                 </View>
@@ -233,12 +233,12 @@ export default function PassportScreen() {
 
 function Avatar({ user }: { user: User }) {
   if (user.avatar_url) {
-    return <Image source={{ uri: user.avatar_url }} className="h-20 w-20 rounded-full border-2 border-olive bg-line" />;
+    return <Image source={{ uri: user.avatar_url }} className="h-20 w-20 rounded-full border-2 border-accent bg-line" />;
   }
   const initials = [user.first_name?.[0], user.last_name?.[0]].filter(Boolean).join("") || user.username[0];
   return (
-    <View className="h-20 w-20 items-center justify-center rounded-full bg-olive">
-      <Text className="text-2xl font-bold uppercase text-chalk">{initials}</Text>
+    <View className="h-20 w-20 items-center justify-center rounded-full bg-accent">
+      <Text className="text-2xl font-bold uppercase text-canvas">{initials}</Text>
     </View>
   );
 }
@@ -246,9 +246,9 @@ function Avatar({ user }: { user: User }) {
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <View className="w-1/2 p-1.5 sm:w-1/4">
-      <View accessible accessibilityLabel={`${label}: ${value}`} className="rounded-2xl border border-line bg-sand p-4">
-        <Text className="text-2xl font-display text-ink">{value}</Text>
-        <Text numberOfLines={1} className="mt-1 text-sm text-ink-muted">
+      <View accessible accessibilityLabel={`${label}: ${value}`} className="rounded-2xl border border-line bg-surface p-4">
+        <Text className="text-2xl font-display text-fg">{value}</Text>
+        <Text numberOfLines={1} className="mt-1 text-sm text-fg-muted">
           {label}
         </Text>
       </View>

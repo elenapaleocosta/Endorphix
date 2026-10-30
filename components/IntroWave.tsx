@@ -87,7 +87,7 @@ export function IntroWave({ height = 132 }: IntroWaveProps) {
           </Svg>
           <Animated.View style={[{ height, overflow: "hidden" }, clipStyle]}>
             <Svg width={width} height={height}>
-              <Path d={wavePath(scaleX, scaleY)} fill="none" stroke={Colors.ink} strokeWidth={1.75} strokeLinecap="round" />
+              <Path d={wavePath(scaleX, scaleY)} fill="none" stroke={Colors.fg} strokeWidth={1.75} strokeLinecap="round" />
             </Svg>
           </Animated.View>
           <Animated.View
@@ -104,7 +104,7 @@ export function IntroWave({ height = 132 }: IntroWaveProps) {
             ]}
           >
             <Svg width={dot} height={dot}>
-              <Circle cx={dot / 2} cy={dot / 2} r={dot / 2} fill={Colors.terracotta} />
+              <Circle cx={dot / 2} cy={dot / 2} r={dot / 2} fill={Colors.highlight} />
             </Svg>
           </Animated.View>
         </>

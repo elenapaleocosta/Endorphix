@@ -93,12 +93,12 @@ function EditProfileForm({ user }: { user: User }) {
           accessibilityLabel="Choose profile photo"
           onPress={choosePhoto}
           disabled={picking}
-          className="h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-olive bg-line"
+          className="h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-line"
         >
           {form.avatarUrl ? (
             <Image source={{ uri: form.avatarUrl }} className="h-full w-full" />
           ) : (
-            <Ionicons name="camera-outline" size={28} color={Colors.inkMuted} />
+            <Ionicons name="camera-outline" size={28} color={Colors.fgMuted} />
           )}
         </Pressable>
         <View className="min-w-0 flex-1 items-start gap-1">

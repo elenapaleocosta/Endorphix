@@ -35,13 +35,13 @@ export function FacilityCard({ facility, onPress }: FacilityCardProps) {
         haptics.tap();
         onPress();
       }}
-      className="overflow-hidden rounded-2xl border border-line bg-sand active:opacity-90"
+      className="overflow-hidden rounded-2xl border border-line bg-surface active:scale-[0.98]"
     >
       {image ? (
         <Image source={{ uri: image }} resizeMode="cover" className="h-36 w-full bg-line" />
       ) : (
         <View className="h-36 w-full items-center justify-center bg-line">
-          <Ionicons name="image-outline" size={28} color={Colors.inkMuted} />
+          <Ionicons name="image-outline" size={28} color={Colors.fgMuted} />
         </View>
       )}
 
@@ -50,21 +50,21 @@ export function FacilityCard({ facility, onPress }: FacilityCardProps) {
           <Tag label={realm.label} dotColor={realm.accent} />
           {rated ? (
             <View className="flex-row items-center gap-1">
-              <Ionicons name="star" size={12} color={Colors.olive} />
-              <Text className="text-sm font-bold text-ink">{facility.rating.toFixed(1)}</Text>
+              <Ionicons name="star" size={12} color={Colors.accent} />
+              <Text className="text-sm font-bold text-fg">{facility.rating.toFixed(1)}</Text>
             </View>
           ) : null}
         </View>
 
-        <Text numberOfLines={2} className="text-lg font-bold leading-6 text-ink">
+        <Text numberOfLines={2} className="text-lg font-bold leading-6 text-fg">
           {facility.name}
         </Text>
 
         <View className="flex-row items-center gap-3">
-          <Text numberOfLines={1} className="min-w-0 flex-1 text-sm text-ink-muted">
+          <Text numberOfLines={1} className="min-w-0 flex-1 text-sm text-fg-muted">
             {facility.address || "Address not listed"}
           </Text>
-          {distance ? <Text className="shrink-0 text-sm font-semibold text-ink">{distance}</Text> : null}
+          {distance ? <Text className="shrink-0 text-sm font-semibold text-fg">{distance}</Text> : null}
         </View>
       </View>
     </Pressable>
@@ -73,7 +73,7 @@ export function FacilityCard({ facility, onPress }: FacilityCardProps) {
 
 export function FacilityCardSkeleton() {
   return (
-    <View className="overflow-hidden rounded-2xl border border-line bg-sand">
+    <View className="overflow-hidden rounded-2xl border border-line bg-surface">
       <Skeleton square className="h-36 w-full" />
       <View className="gap-3 p-4">
         <Skeleton className="h-4 w-20" />

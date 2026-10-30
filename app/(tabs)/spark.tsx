@@ -47,7 +47,7 @@ export default function SparkScreen() {
     <Screen inTabs>
       <PageHeader
         eyebrow="Spontaneous action"
-        eyebrowTone="terracotta"
+        eyebrowTone="highlight"
         title="The Spark"
         subtitle={`One tap surfaces a top-rated venue (${SPARK_MIN_RATING}★ and up) within ${MAX_RADIUS_KM} km. Stop deciding, start moving.`}
       />
@@ -82,18 +82,18 @@ function SparkResult({ venue }: { venue: Facility }) {
     >
       <Card accent>
         <View className="flex-row items-center justify-between gap-2">
-          <Tag label="Spark pick" tone="terracotta" />
+          <Tag label="Spark pick" tone="highlight" />
           <View className="flex-row items-center gap-1">
-            <Ionicons name="star" size={14} color={Colors.olive} />
-            <Text className="text-base font-bold text-ink">{venue.rating.toFixed(1)}</Text>
+            <Ionicons name="star" size={14} color={Colors.accent} />
+            <Text className="text-base font-bold text-fg">{venue.rating.toFixed(1)}</Text>
           </View>
         </View>
 
-        <Text accessibilityRole="header" className="mt-3 text-2xl font-display text-ink">
+        <Text accessibilityRole="header" className="mt-3 text-2xl font-display text-fg">
           {venue.name}
         </Text>
         {venue.description ? (
-          <Text className="mt-2 text-base leading-6 text-ink-muted">{venue.description}</Text>
+          <Text className="mt-2 text-base leading-6 text-fg-muted">{venue.description}</Text>
         ) : null}
 
         <View className="mt-3 flex-row flex-wrap gap-2">
@@ -103,14 +103,14 @@ function SparkResult({ venue }: { venue: Facility }) {
           ))}
         </View>
 
-        <Text className="mt-3 text-sm text-ink-muted">
+        <Text className="mt-3 text-sm text-fg-muted">
           {[venue.address, distance ? `${distance} away` : null].filter(Boolean).join(" · ")}
         </Text>
 
         {recovery ? (
-          <View className="mt-4 rounded-xl border border-line bg-paper p-3">
-            <Eyebrow tone="olive">On-site recovery</Eyebrow>
-            <Text className="mt-1 text-sm font-semibold text-ink">
+          <View className="mt-4 rounded-xl border border-line bg-raised p-3">
+            <Eyebrow tone="accent">On-site recovery</Eyebrow>
+            <Text className="mt-1 text-sm font-semibold text-fg">
               {recovery.title} · {recovery.durationMinutes} min
             </Text>
           </View>

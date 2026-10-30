@@ -57,10 +57,10 @@ export function SportBreakdown({ bookings }: { bookings: Booking[] }) {
 
       {top ? (
         <>
-          <View className="mt-4 rounded-xl border border-line bg-paper p-4">
-            <Eyebrow tone="olive">Most trained</Eyebrow>
-            <Text className="mt-1 text-xl font-bold text-ink">{sportLabel(top.sport)}</Text>
-            <Text className="mt-0.5 text-sm text-ink-muted">
+          <View className="mt-4 rounded-xl border border-line bg-raised p-4">
+            <Eyebrow tone="accent">Most trained</Eyebrow>
+            <Text className="mt-1 text-xl font-bold text-fg">{sportLabel(top.sport)}</Text>
+            <Text className="mt-0.5 text-sm text-fg-muted">
               {top.count} {top.count === 1 ? "session" : "sessions"}
               {top.conditioning ? ` · conditioning index ${top.conditioning}/100` : ""}
             </Text>
@@ -74,20 +74,20 @@ export function SportBreakdown({ bookings }: { bookings: Booking[] }) {
                 accessibilityLabel={`${sportLabel(row.sport)}: ${row.count} ${row.count === 1 ? "session" : "sessions"}`}
               >
                 <View className="flex-row items-center justify-between gap-3">
-                  <Text numberOfLines={1} className="min-w-0 flex-1 text-sm font-semibold text-ink">
+                  <Text numberOfLines={1} className="min-w-0 flex-1 text-sm font-semibold text-fg">
                     {sportLabel(row.sport)}
                   </Text>
-                  <Text className="text-sm text-ink-muted">{row.count}</Text>
+                  <Text className="text-sm text-fg-muted">{row.count}</Text>
                 </View>
                 <View className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-line">
-                  <View className="h-full rounded-full bg-olive" style={{ width: `${(row.count / max) * 100}%` }} />
+                  <View className="h-full rounded-full bg-accent" style={{ width: `${(row.count / max) * 100}%` }} />
                 </View>
               </View>
             ))}
           </View>
         </>
       ) : (
-        <Text className="mt-4 text-sm text-ink-muted">No sessions booked in this period.</Text>
+        <Text className="mt-4 text-sm text-fg-muted">No sessions booked in this period.</Text>
       )}
     </Card>
   );

@@ -3,7 +3,7 @@ import { Text, View } from "react-native";
 
 interface CardProps {
   children: ReactNode;
-  tone?: "sand" | "paper";
+  tone?: "surface" | "raised";
   /** Terracotta outline for the single most important card on a screen. */
   accent?: boolean;
   /** No inner padding, for cards that hold full-bleed ListRows. */
@@ -11,12 +11,12 @@ interface CardProps {
   className?: string;
 }
 
-/** The one card surface: sand on the chalk canvas, paper when nested inside a sand card. */
-export function Card({ children, tone = "sand", accent = false, flush = false, className = "" }: CardProps) {
+/** The one card surface: surface on the canvas, raised when nested inside a surface card. */
+export function Card({ children, tone = "surface", accent = false, flush = false, className = "" }: CardProps) {
   return (
     <View
-      className={`overflow-hidden rounded-2xl border ${flush ? "" : "p-4"} ${accent ? "border-terracotta/40" : "border-line"} ${
-        tone === "sand" ? "bg-sand" : "bg-paper"
+      className={`overflow-hidden rounded-2xl border ${flush ? "" : "p-4"} ${accent ? "border-highlight-edge" : "border-line"} ${
+        tone === "surface" ? "bg-surface" : "bg-raised"
       } ${className}`}
     >
       {children}
@@ -24,12 +24,12 @@ export function Card({ children, tone = "sand", accent = false, flush = false, c
   );
 }
 
-type TagTone = "neutral" | "olive" | "terracotta";
+type TagTone = "neutral" | "accent" | "highlight";
 
 const TAG_TONE: Record<TagTone, { box: string; text: string }> = {
-  neutral: { box: "bg-paper border-line", text: "text-ink" },
-  olive: { box: "bg-olive border-olive", text: "text-chalk" },
-  terracotta: { box: "bg-terracotta/10 border-terracotta/30", text: "text-terracotta" },
+  neutral: { box: "bg-raised border-line", text: "text-fg" },
+  accent: { box: "bg-accent border-accent", text: "text-canvas" },
+  highlight: { box: "bg-highlight-soft border-highlight-edge", text: "text-highlight" },
 };
 
 interface TagProps {

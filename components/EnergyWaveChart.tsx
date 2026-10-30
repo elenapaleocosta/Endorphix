@@ -85,11 +85,11 @@ export function EnergyWaveChart({ data, isLoading, isError, onRetry, onLogFirst 
     <Card>
       <Eyebrow>Endorphin wave · 30 days</Eyebrow>
       <View className="mt-1 flex-row flex-wrap items-baseline gap-x-2">
-        <Text className="text-3xl font-display text-ink">{average}</Text>
-        <Text className="text-sm text-ink-muted">average</Text>
+        <Text className="text-3xl font-display text-fg">{average}</Text>
+        <Text className="text-sm text-fg-muted">average</Text>
         <View className="flex-row items-center gap-1.5">
           <View className="h-2 w-2 rounded-full" style={{ backgroundColor: band.color }} />
-          <Text className="text-sm font-semibold text-ink">{band.label}</Text>
+          <Text className="text-sm font-semibold text-fg">{band.label}</Text>
         </View>
       </View>
 
@@ -107,9 +107,9 @@ export function EnergyWaveChart({ data, isLoading, isError, onRetry, onLogFirst 
             {geometry.gridY.map((y) => (
               <Line key={y} x1={PAD_X} x2={width - PAD_X} y1={y} y2={y} stroke={Colors.line} strokeDasharray="4 4" />
             ))}
-            {geometry.area ? <Path d={geometry.area} fill={Colors.olive} fillOpacity={0.1} /> : null}
+            {geometry.area ? <Path d={geometry.area} fill={Colors.accent} fillOpacity={0.1} /> : null}
             {geometry.line ? (
-              <Path d={geometry.line} fill="none" stroke={Colors.olive} strokeWidth={2.5} strokeLinecap="round" />
+              <Path d={geometry.line} fill="none" stroke={Colors.accent} strokeWidth={2.5} strokeLinecap="round" />
             ) : null}
             {geometry.points.map((p, i) => {
               const isPeak = p === geometry.peak;
@@ -121,12 +121,12 @@ export function EnergyWaveChart({ data, isLoading, isError, onRetry, onLogFirst 
                     cx={p.x}
                     cy={p.y}
                     r={isPeak ? 5 : 3.5}
-                    fill={isPeak ? Colors.terracotta : Colors.olive}
-                    stroke={Colors.sand}
+                    fill={isPeak ? Colors.highlight : Colors.accent}
+                    stroke={Colors.surface}
                     strokeWidth={1.5}
                   />
                   {showLabel ? (
-                    <SvgText x={p.x} y={HEIGHT - 6} fontSize={11} fill={Colors.inkMuted} textAnchor="middle">
+                    <SvgText x={p.x} y={HEIGHT - 6} fontSize={11} fill={Colors.fgMuted} textAnchor="middle">
                       {p.label}
                     </SvgText>
                   ) : null}
@@ -138,7 +138,7 @@ export function EnergyWaveChart({ data, isLoading, isError, onRetry, onLogFirst 
               y={Math.max(geometry.peak.y - 10, 12)}
               fontSize={11}
               fontWeight="700"
-              fill={Colors.terracotta}
+              fill={Colors.highlight}
               textAnchor="middle"
             >
               {`Peak ${geometry.peak.score}`}

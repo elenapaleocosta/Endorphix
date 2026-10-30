@@ -13,7 +13,7 @@ import Animated, {
 import { haptics } from "@/lib/haptics";
 import { useOnboardingStore } from "@/store/onboarding.store";
 import { IntroWave } from "@/components/IntroWave";
-import { Button, Eyebrow } from "@/components/ui";
+import { Button, Eyebrow, Terrain } from "@/components/ui";
 
 /** Fades and lifts its children into place once, after `delay` ms. */
 function Reveal({ delay, children }: { delay: number; children: ReactNode }) {
@@ -49,7 +49,8 @@ export default function IntroScreen() {
   };
 
   return (
-    <View className="flex-1 bg-chalk" style={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }}>
+    <View className="flex-1 bg-canvas" style={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }}>
+      <Terrain />
       <View className="w-full max-w-xl flex-1 self-center px-6">
         <Reveal delay={0}>
           <Eyebrow>The luxury of movement</Eyebrow>
@@ -64,7 +65,7 @@ export default function IntroScreen() {
           <Reveal delay={1500}>
             <Text
               accessibilityRole="header"
-              className="mt-10 font-display text-ink"
+              className="mt-10 font-display text-fg"
               style={{ fontSize: wordmarkSize, lineHeight: wordmarkSize * 1.05, letterSpacing: -wordmarkSize * 0.04 }}
             >
               endorphix
@@ -72,8 +73,8 @@ export default function IntroScreen() {
           </Reveal>
 
           <Reveal delay={1900}>
-            <Text className="mt-3 font-display-semibold text-xl leading-7 text-ink">Movement is a gift.</Text>
-            <Text className="font-display-semibold text-xl leading-7 text-ink-muted">Spend it well.</Text>
+            <Text className="mt-3 font-display-semibold text-xl leading-7 text-fg">Movement is a gift.</Text>
+            <Text className="font-display-semibold text-xl leading-7 text-fg-muted">Spend it well.</Text>
           </Reveal>
         </View>
 
@@ -84,8 +85,8 @@ export default function IntroScreen() {
             onPress={() => enter("/(auth)/sign-in")}
             className="mt-2 min-h-12 flex-row items-center justify-center gap-1"
           >
-            <Text className="text-sm text-ink-muted">Already have a passport?</Text>
-            <Text className="text-sm font-bold text-olive">Sign in</Text>
+            <Text className="text-sm text-fg-muted">Already have a passport?</Text>
+            <Text className="text-sm font-bold text-accent">Sign in</Text>
           </Pressable>
         </Reveal>
       </View>

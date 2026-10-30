@@ -9,7 +9,7 @@ interface ToggleProps {
 }
 
 // react-native-web ignores thumbColor for the "on" state and falls back to its own teal.
-const webColors = { activeThumbColor: Colors.paper, activeTrackColor: Colors.olive } as object;
+const webColors = { activeThumbColor: Colors.raised, activeTrackColor: Colors.accent } as object;
 
 export function Toggle({ value, onChange, accessibilityLabel }: ToggleProps) {
   return (
@@ -20,8 +20,8 @@ export function Toggle({ value, onChange, accessibilityLabel }: ToggleProps) {
         haptics.selection();
         onChange(next);
       }}
-      trackColor={{ false: Colors.line, true: Colors.olive }}
-      thumbColor={Colors.paper}
+      trackColor={{ false: Colors.line, true: Colors.accent }}
+      thumbColor={Colors.raised}
       {...webColors}
     />
   );

@@ -20,7 +20,7 @@ export function TimetableCard({ timetable }: { timetable: FacilityTimetable }) {
   if (!hasHours) {
     return (
       <View className="rounded-2xl border border-dashed border-line px-4 py-6">
-        <Text className="text-center text-sm text-ink-muted">Opening hours aren't listed for this venue.</Text>
+        <Text className="text-center text-sm text-fg-muted">Opening hours aren't listed for this venue.</Text>
       </View>
     );
   }
@@ -36,15 +36,15 @@ export function TimetableCard({ timetable }: { timetable: FacilityTimetable }) {
             key={key}
             accessible
             accessibilityLabel={`${label}${isToday ? ", today" : ""}: ${hours}`}
-            className={`flex-row items-center justify-between px-4 py-3 ${isToday ? "bg-paper" : ""} ${
+            className={`flex-row items-center justify-between px-4 py-3 ${isToday ? "bg-raised" : ""} ${
               index < DAYS.length - 1 ? "border-b border-line" : ""
             }`}
           >
-            <Text className={`text-sm ${isToday ? "font-bold text-olive" : "text-ink-muted"}`}>
+            <Text className={`text-sm ${isToday ? "font-bold text-accent" : "text-fg-muted"}`}>
               {label}
               {isToday ? " · Today" : ""}
             </Text>
-            <Text className={`text-sm ${isToday ? "font-bold text-ink" : slot ? "text-ink" : "text-ink-muted"}`}>
+            <Text className={`text-sm ${isToday ? "font-bold text-fg" : slot ? "text-fg" : "text-fg-muted"}`}>
               {hours}
             </Text>
           </View>
