@@ -94,7 +94,7 @@ export default function PassportScreen() {
           <Avatar user={user} />
         </Pressable>
         <View className="min-w-0 flex-1">
-          <Text accessibilityRole="header" numberOfLines={2} className="text-2xl font-extrabold text-ink">
+          <Text accessibilityRole="header" numberOfLines={2} className="text-2xl font-display text-ink">
             {displayName(user)}
           </Text>
           {user.nickname ? <Text className="text-sm font-semibold text-ink-muted">“{user.nickname}”</Text> : null}
@@ -247,7 +247,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <View className="w-1/2 p-1.5 sm:w-1/4">
       <View accessible accessibilityLabel={`${label}: ${value}`} className="rounded-2xl border border-line bg-sand p-4">
-        <Text className="text-2xl font-extrabold text-ink">{value}</Text>
+        <Text className="text-2xl font-display text-ink">{value}</Text>
         <Text numberOfLines={1} className="mt-1 text-sm text-ink-muted">
           {label}
         </Text>

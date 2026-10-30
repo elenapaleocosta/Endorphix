@@ -110,7 +110,7 @@ export default function EnergyModal() {
             onAccessibilityAction={(e) => adjust(score + (e.nativeEvent.actionName === "increment" ? 5 : -5))}
             className="min-w-0 flex-1 items-center"
           >
-            <Text className="text-6xl font-extrabold text-ink">{score}</Text>
+            <Text className="text-6xl font-display text-ink">{score}</Text>
             <View className="mt-1 flex-row items-center gap-1.5">
               <View className="h-2 w-2 rounded-full" style={{ backgroundColor: band.color }} />
               <Text className="text-sm font-bold text-ink">{band.label}</Text>

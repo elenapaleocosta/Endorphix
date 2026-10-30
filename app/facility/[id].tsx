@@ -96,7 +96,7 @@ function FacilityDetail({ facility }: { facility: Facility }) {
         ))}
       </View>
 
-      <Text accessibilityRole="header" className="mt-3 text-3xl font-extrabold text-ink">
+      <Text accessibilityRole="header" className="mt-3 text-3xl font-display text-ink">
         {facility.name}
       </Text>
       <Text className="mt-1 text-base text-ink-muted">

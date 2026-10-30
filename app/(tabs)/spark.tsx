@@ -89,7 +89,7 @@ function SparkResult({ venue }: { venue: Facility }) {
           </View>
         </View>
 
-        <Text accessibilityRole="header" className="mt-3 text-2xl font-extrabold text-ink">
+        <Text accessibilityRole="header" className="mt-3 text-2xl font-display text-ink">
           {venue.name}
         </Text>
         {venue.description ? (

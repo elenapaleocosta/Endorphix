@@ -26,7 +26,7 @@ export function PostSessionBanner() {
       <View accessibilityRole="alert" className="w-full max-w-xl gap-3 rounded-2xl bg-ink p-4">
         <View className="flex-row items-start gap-3">
           <View className="min-w-0 flex-1">
-            <Text className="text-2xs font-extrabold uppercase tracking-eyebrow text-sand">30 min post-session</Text>
+            <Text className="text-2xs font-display uppercase tracking-eyebrow text-sand">30 min post-session</Text>
             <Text numberOfLines={1} className="mt-1 text-base font-bold text-chalk">
               {booking.facility_name}
             </Text>

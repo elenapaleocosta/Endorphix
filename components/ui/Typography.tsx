@@ -13,7 +13,7 @@ const EYEBROW_TONE: Record<EyebrowTone, string> = {
 
 export function Eyebrow({ children, tone = "muted" }: { children: ReactNode; tone?: EyebrowTone }) {
   return (
-    <Text className={`text-2xs font-extrabold uppercase tracking-eyebrow ${EYEBROW_TONE[tone]}`}>{children}</Text>
+    <Text className={`text-2xs font-display uppercase tracking-eyebrow ${EYEBROW_TONE[tone]}`}>{children}</Text>
   );
 }
 
@@ -35,7 +35,7 @@ export function PageHeader({ eyebrow, eyebrowTone = "olive", title, subtitle, ac
       <View className="flex-row items-start justify-between gap-4">
         <View className="min-w-0 flex-1">
           {eyebrow ? <Eyebrow tone={eyebrowTone}>{eyebrow}</Eyebrow> : null}
-          <Text accessibilityRole="header" className="mt-1 text-3xl font-extrabold text-ink">
+          <Text accessibilityRole="header" className="mt-1 text-3xl font-display text-ink">
             {title}
           </Text>
         </View>
@@ -54,7 +54,7 @@ interface SectionHeaderProps {
 export function SectionHeader({ title, action }: SectionHeaderProps) {
   return (
     <View className="mb-3 min-h-10 flex-row items-center justify-between gap-3">
-      <Text accessibilityRole="header" className="min-w-0 flex-1 text-lg font-bold text-ink" numberOfLines={2}>
+      <Text accessibilityRole="header" className="min-w-0 flex-1 font-display-bold text-lg text-ink" numberOfLines={2}>
         {title}
       </Text>
       {action}
