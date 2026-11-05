@@ -85,7 +85,7 @@ export function EnergyWaveChart({ data, isLoading, isError, onRetry, onLogFirst 
     <Card>
       <Eyebrow>Endorphin wave · 30 days</Eyebrow>
       <View className="mt-1 flex-row flex-wrap items-baseline gap-x-2">
-        <Text className="text-3xl font-display text-fg">{average}</Text>
+        <Text className="text-3xl font-numeral text-fg">{average}</Text>
         <Text className="text-sm text-fg-muted">average</Text>
         <View className="flex-row items-center gap-1.5">
           <View className="h-2 w-2 rounded-full" style={{ backgroundColor: band.color }} />

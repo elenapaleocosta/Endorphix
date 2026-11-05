@@ -73,7 +73,7 @@ export default function SignInScreen() {
             Demo mode: no backend is configured, so any email and password open the demo passport.
           </Text>
           <Button
-            label="Continue with demo account"
+            label="Use demo account"
             variant="secondary"
             size="sm"
             onPress={() => enterApp(DEMO_ATHLETE)}

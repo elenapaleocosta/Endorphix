@@ -18,7 +18,7 @@ const CONTAINER: Record<Variant, string> = {
 
 const LABEL: Record<Variant, string> = {
   primary: "text-canvas",
-  spark: "text-fg",
+  spark: "text-canvas",
   secondary: "text-fg",
   danger: "text-danger",
   link: "text-accent",
@@ -26,11 +26,19 @@ const LABEL: Record<Variant, string> = {
 
 const FOREGROUND: Record<Variant, string> = {
   primary: Colors.canvas,
-  spark: Colors.fg,
+  spark: Colors.canvas,
   secondary: Colors.fg,
   danger: Colors.danger,
   link: Colors.accent,
 };
+
+/**
+ * Action buttons speak in the wordmark's voice: Archivo Expanded, uppercase, like lettering on kit.
+ * Expanded capitals run wide, so labels sit a size below the old bold system text.
+ * Links and the Spark button keep plain bold labels.
+ */
+const CTA_SIZE: Record<Size, string> = { lg: "text-[15px]", md: "text-[13px]", sm: "text-xs" };
+const PLAIN_LABEL: Variant[] = ["link", "spark"];
 
 interface ButtonProps {
   label: string;
@@ -85,7 +93,7 @@ export function Button({
       ) : null}
       <Text
         numberOfLines={1}
-        className={`font-bold ${{ lg: "text-lg", md: "text-base", sm: "text-sm" }[size]} ${
+        className={`${PLAIN_LABEL.includes(variant) ? `font-bold ${{ lg: "text-lg", md: "text-base", sm: "text-sm" }[size]}` : `uppercase tracking-cta font-wordmark ${CTA_SIZE[size]}`} ${
           muted ? "text-fg-faint" : LABEL[variant]
         }`}
       >

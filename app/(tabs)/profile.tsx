@@ -247,7 +247,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <View className="w-1/2 p-1.5 sm:w-1/4">
       <View accessible accessibilityLabel={`${label}: ${value}`} className="rounded-2xl border border-line bg-surface p-4">
-        <Text className="text-2xl font-display text-fg">{value}</Text>
+        <Text className="text-2xl font-numeral text-fg">{value}</Text>
         <Text numberOfLines={1} className="mt-1 text-sm text-fg-muted">
           {label}
         </Text>

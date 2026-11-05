@@ -29,7 +29,7 @@ export function Chip({ label, selected, onPress, sublabel, dotColor, grow = fals
     >
       <View className="flex-row items-center gap-1.5">
         {dotColor ? <View className="h-2 w-2 rounded-full" style={{ backgroundColor: dotColor }} /> : null}
-        <Text numberOfLines={1} className={`text-sm font-semibold ${selected ? "text-canvas" : "text-fg"}`}>
+        <Text numberOfLines={1} className={`text-sm font-bold ${selected ? "text-canvas" : "text-fg"}`}>
           {label}
         </Text>
       </View>

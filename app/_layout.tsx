@@ -9,6 +9,7 @@ import {
   Urbanist_700Bold,
   Urbanist_800ExtraBold,
 } from "@expo-google-fonts/urbanist";
+import { Archivo_800ExtraBold } from "@expo-google-fonts/archivo";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { queryClient } from "@/lib/query-client";
@@ -23,7 +24,14 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const setUser = useAuthStore((s) => s.setUser);
-  const [fontsLoaded, fontError] = useFonts({ Urbanist_600SemiBold, Urbanist_700Bold, Urbanist_800ExtraBold });
+  const [fontsLoaded, fontError] = useFonts({
+    Urbanist_600SemiBold,
+    Urbanist_700Bold,
+    Urbanist_800ExtraBold,
+    Archivo_800ExtraBold,
+    // Static instance of Archivo at 125% width / 800 weight (OFL, from Google Fonts): the wordmark only.
+    ArchivoExpanded_800ExtraBold: require("../assets/fonts/Archivo-ExpandedExtraBold.ttf"),
+  });
   const fontsSettled = fontsLoaded || fontError !== null;
 
   useEffect(() => {

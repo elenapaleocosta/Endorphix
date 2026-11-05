@@ -52,7 +52,10 @@ module.exports = {
       // Each weight is its own family on native, so never combine these with font-bold/font-extrabold
       // (web would synthesise a faux bold on top).
       fontFamily: {
+        wordmark: ["ArchivoExpanded_800ExtraBold"],
         display: ["Urbanist_800ExtraBold"],
+        // Big data figures: Passport stats, the energy average, the session score.
+        numeral: ["Archivo_800ExtraBold"],
         "display-bold": ["Urbanist_700Bold"],
         "display-semibold": ["Urbanist_600SemiBold"],
       },
@@ -60,7 +63,9 @@ module.exports = {
         "2xs": ["11px", "14px"],
       },
       letterSpacing: {
-        eyebrow: "1.5px",
+        eyebrow: "2.1px",
+        // Uppercase Archivo Expanded on action buttons and the segmented control.
+        cta: "0.8px",
       },
     },
   },

@@ -13,7 +13,7 @@ const EYEBROW_TONE: Record<EyebrowTone, string> = {
 
 export function Eyebrow({ children, tone = "muted" }: { children: ReactNode; tone?: EyebrowTone }) {
   return (
-    <Text className={`text-2xs font-display uppercase tracking-eyebrow ${EYEBROW_TONE[tone]}`}>{children}</Text>
+    <Text className={`text-2xs font-display-bold uppercase tracking-eyebrow ${EYEBROW_TONE[tone]}`}>{children}</Text>
   );
 }
 

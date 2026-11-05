@@ -39,8 +39,9 @@ export default function IntroScreen() {
   const router = useRouter();
   const completeFTUE = useOnboardingStore((s) => s.completeFTUE);
 
-  // The wordmark is the artwork: it scales with the viewport and stays inside the column.
-  const wordmarkSize = Math.round(Math.min(Math.max(width * 0.17, 52), 88));
+  // The wordmark is the artwork: it fills the text column (max-w-xl minus padding).
+  // Archivo Expanded sets "endorphix" about 6 em wide.
+  const wordmarkSize = Math.round(Math.min((Math.min(width, 576) - 48) / 6.2, 84));
 
   const enter = (href: Href) => {
     haptics.success();
@@ -65,8 +66,8 @@ export default function IntroScreen() {
           <Reveal delay={1500}>
             <Text
               accessibilityRole="header"
-              className="mt-10 font-display text-fg"
-              style={{ fontSize: wordmarkSize, lineHeight: wordmarkSize * 1.05, letterSpacing: -wordmarkSize * 0.04 }}
+              className="mt-10 font-wordmark text-fg"
+              style={{ fontSize: wordmarkSize, lineHeight: wordmarkSize * 1.05, letterSpacing: -wordmarkSize * 0.03 }}
             >
               endorphix
             </Text>
