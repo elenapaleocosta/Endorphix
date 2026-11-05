@@ -29,7 +29,7 @@ type TagTone = "neutral" | "accent" | "highlight";
 const TAG_TONE: Record<TagTone, { box: string; text: string }> = {
   neutral: { box: "bg-raised border-line", text: "text-fg" },
   accent: { box: "bg-accent border-accent", text: "text-canvas" },
-  highlight: { box: "bg-highlight-soft border-highlight-edge", text: "text-highlight" },
+  highlight: { box: "bg-highlight-soft border-highlight-edge", text: "text-highlight-ink" },
 };
 
 interface TagProps {

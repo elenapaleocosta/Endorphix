@@ -8,12 +8,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "endorphix",
-  userInterfaceStyle: "light",
-  backgroundColor: "#F4EDE0",
+  userInterfaceStyle: "dark",
+  backgroundColor: "#26292B",
   splash: {
     image: "./assets/images/splash-icon.png",
     resizeMode: "contain",
-    backgroundColor: "#F4EDE0",
+    backgroundColor: "#26292B",
   },
   ios: {
     supportsTablet: false,
@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#F4EDE0",
+      backgroundColor: "#26292B",
     },
     package: "com.endorphix.app",
     permissions: [
@@ -52,7 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         image: "./assets/images/splash-icon.png",
         imageWidth: 200,
         resizeMode: "contain",
-        backgroundColor: "#F4EDE0",
+        backgroundColor: "#26292B",
       },
     ],
   ],

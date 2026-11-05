@@ -146,8 +146,8 @@ export default function PassportScreen() {
                     {booking.activity_name} · {booking.start_time}–{booking.end_time}
                   </Text>
                 </View>
-                <Text className="text-sm font-bold text-highlight">Rate</Text>
-                <Ionicons name="chevron-forward" size={18} color={Colors.highlight} />
+                <Text className="text-sm font-bold text-highlight-ink">Rate</Text>
+                <Ionicons name="chevron-forward" size={18} color={Colors.highlightInk} />
               </Pressable>
             ))}
           </View>

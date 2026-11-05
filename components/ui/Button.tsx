@@ -10,7 +10,7 @@ type Size = "lg" | "md" | "sm";
 
 const CONTAINER: Record<Variant, string> = {
   primary: "bg-accent",
-  spark: "bg-highlight",
+  spark: "bg-highlight-strong",
   secondary: "bg-raised border border-line",
   danger: "bg-raised border border-danger-edge",
   link: "",
@@ -18,7 +18,7 @@ const CONTAINER: Record<Variant, string> = {
 
 const LABEL: Record<Variant, string> = {
   primary: "text-canvas",
-  spark: "text-canvas",
+  spark: "text-fg",
   secondary: "text-fg",
   danger: "text-danger",
   link: "text-accent",
@@ -26,7 +26,7 @@ const LABEL: Record<Variant, string> = {
 
 const FOREGROUND: Record<Variant, string> = {
   primary: Colors.canvas,
-  spark: Colors.canvas,
+  spark: Colors.fg,
   secondary: Colors.fg,
   danger: Colors.danger,
   link: Colors.accent,

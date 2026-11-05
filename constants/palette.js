@@ -3,34 +3,41 @@
  * Consumed by tailwind.config.js (class names) and constants/index.ts (raw values
  * for SVG, Switch, ActivityIndicator and placeholder colours).
  *
- * "Natural active trail": warm and grounded. Forest Pine ink on sand-washed paper, with
- * Rust Terracotta as the athletic highlight. Source colours are marked; every other tone is
- * generated from them. Tokens are named by role, not hue. Text tones meet WCAG AA (4.5:1)
- * on canvas and surface; amber and ochre are under 3:1, so they never carry text.
+ * Charcoal and periwinkle: a dark, cool theme. Source colours are marked; every other tone
+ * is generated from them. Tokens are named by role, not hue. Text tones meet WCAG AA (4.5:1)
+ * on canvas, surface and raised. Periwinkle (#5F7ADB) is a mid-tone, 2.7–3.7:1 against
+ * both the charcoals and light text, so it is a fill and a mark, never a text colour or a
+ * label background; the Spark button uses highlightStrong instead.
  */
 const palette = {
-  /** Golden Sand washed 72% toward white: app background, like the palette card's paper. */
-  canvas: "#F4EDE0",
-  /** Golden Sand washed 55% toward white: cards. */
-  surface: "#EDE3CD",
-  /** Golden Sand washed 40% toward white: inputs, secondary buttons, cards nested in a surface. */
-  raised: "#E8D9BC",
-  /** Golden Sand (#D8C090) blended 50% with Warm Ochre (#9E8E56): hairlines, tracks, inactive indicators. */
-  line: "#BBA773",
-  /** Source #1E2D1E Forest Pine: primary text. */
-  fg: "#1E2D1E",
-  /** Forest Pine weathered 45% toward Warm Ochre: secondary text. */
-  fgMuted: "#585937",
-  /** Forest Pine weathered 55% toward Warm Ochre: tertiary text and placeholders. */
-  fgFaint: "#64623D",
-  /** Source Forest Pine: primary actions, links and selected states (labels sit in canvas). */
-  accent: "#1E2D1E",
-  /** Source #C0823F Sunlit Amber: decorative marks, chart secondaries, realm dots. */
-  tint: "#C0823F",
-  /** Source #A04E35 Rust Terracotta: Spark, the endorphin peak, highlighted cards and tags. */
-  highlight: "#A04E35",
-  /** Rust deepened toward brick: errors and destructive actions only. */
-  danger: "#8A3A2E",
+  /** Source #26292B Charcoal: app background. */
+  canvas: "#26292B",
+  /** Source #2E3239 Slate: cards. */
+  surface: "#2E3239",
+  /** Slate lifted 10% toward Light Periwinkle: inputs, secondary buttons, cards nested in a surface. */
+  raised: "#3A3F4B",
+  /** Slate lifted 28% toward Light Periwinkle: hairlines, tracks, inactive indicators, contour lines. */
+  line: "#4E566C",
+  /** Light Periwinkle washed 78% toward white: primary text, cool to match the blues. */
+  fg: "#EBEEFB",
+  /** Text dimmed 28% toward Slate: secondary text. */
+  fgMuted: "#B6B9C5",
+  /** Text dimmed 36% toward Slate: tertiary text and placeholders. */
+  fgFaint: "#A7AAB5",
+  /** Source #A2B2EE Light Periwinkle: primary actions, links and selected states (labels sit in canvas). */
+  accent: "#A2B2EE",
+  /** Light Periwinkle muted 35% toward Slate: Land realm, the mid energy band, decorative marks. */
+  tint: "#7985AF",
+  /** Source Light Periwinkle: Water realm and the keyboard focus ring. */
+  tintCool: "#A2B2EE",
+  /** Source #5F7ADB Periwinkle: the endorphin peak, Mountain realm, highlighted cards and tags. Fills and marks only. */
+  highlight: "#5F7ADB",
+  /** Periwinkle deepened 25% toward Charcoal: the Spark button fill, so its light label passes AA. */
+  highlightStrong: "#5166AF",
+  /** Source Light Periwinkle: the highlight when it is text or an icon. */
+  highlightInk: "#A2B2EE",
+  /** Muted rose, the one warm note, kept for errors so they never blend into the blues. */
+  danger: "#E39A96",
 };
 
 module.exports = { palette };

@@ -24,8 +24,8 @@ export interface MacroRealmDefinition {
 }
 
 export const MACRO_REALMS: MacroRealmDefinition[] = [
-  { id: "water", label: "Water", descriptor: "Aquatic", accent: palette.tint },
-  { id: "land", label: "Land", descriptor: "Court & track", accent: palette.accent },
+  { id: "water", label: "Water", descriptor: "Aquatic", accent: palette.tintCool },
+  { id: "land", label: "Land", descriptor: "Court & track", accent: palette.tint },
   { id: "mountain", label: "Mountain", descriptor: "Vertical", accent: palette.highlight },
 ];
 

@@ -138,7 +138,7 @@ export function EnergyWaveChart({ data, isLoading, isError, onRetry, onLogFirst 
               y={Math.max(geometry.peak.y - 10, 12)}
               fontSize={11}
               fontWeight="700"
-              fill={Colors.highlight}
+              fill={Colors.highlightInk}
               textAnchor="middle"
             >
               {`Peak ${geometry.peak.score}`}

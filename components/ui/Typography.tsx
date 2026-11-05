@@ -7,7 +7,7 @@ type EyebrowTone = "muted" | "accent" | "highlight" | "tint";
 const EYEBROW_TONE: Record<EyebrowTone, string> = {
   muted: "text-fg-muted",
   accent: "text-accent",
-  highlight: "text-highlight",
+  highlight: "text-highlight-ink",
   tint: "text-tint",
 };
 

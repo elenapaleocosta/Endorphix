@@ -16,7 +16,7 @@ function wash(color, amount) {
 module.exports = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   presets: [require("nativewind/preset")],
-  // The app has one (light) theme. "class" also avoids NativeWind's web runtime throwing under the default "media" mode.
+  // The app has one (dark) theme. "class" also avoids NativeWind's web runtime throwing under the default "media" mode.
   darkMode: "class",
   theme: {
     extend: {
@@ -31,9 +31,14 @@ module.exports = {
           faint: palette.fgFaint,
         },
         accent: palette.accent,
-        tint: palette.tint,
+        tint: {
+          DEFAULT: palette.tint,
+          cool: palette.tintCool,
+        },
         highlight: {
           DEFAULT: palette.highlight,
+          ink: palette.highlightInk,
+          strong: palette.highlightStrong,
           soft: wash(palette.highlight, 0.1),
           edge: wash(palette.highlight, 0.4),
         },
