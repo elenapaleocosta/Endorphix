@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from "react-native";
+import { Colors } from "@/constants";
 import { haptics } from "@/lib/haptics";
 
 interface ChipProps {
@@ -28,7 +29,10 @@ export function Chip({ label, selected, onPress, sublabel, dotColor, grow = fals
       } ${grow ? "flex-1 items-center" : ""}`}
     >
       <View className="flex-row items-center gap-1.5">
-        {dotColor ? <View className="h-2 w-2 rounded-full" style={{ backgroundColor: dotColor }} /> : null}
+        {/* On a selected chip the dot sits on the accent fill, which can match it (Water), so it switches to canvas. */}
+        {dotColor ? (
+          <View className="h-2 w-2 rounded-full" style={{ backgroundColor: selected ? Colors.canvas : dotColor }} />
+        ) : null}
         <Text numberOfLines={1} className={`text-sm font-bold ${selected ? "text-canvas" : "text-fg"}`}>
           {label}
         </Text>

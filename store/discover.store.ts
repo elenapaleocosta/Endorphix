@@ -13,8 +13,8 @@ interface DiscoverState {
   setSearchMode: (mode: SearchMode) => void;
   /** Selecting the active realm again clears it. Changing realm always clears the sport. */
   toggleRealm: (realm: MacroRealm) => void;
-  /** Selecting the active sport again clears it. */
-  toggleSport: (sport: SportCategory) => void;
+  /** null clears the sport ("any sport"). */
+  setSport: (sport: SportCategory | null) => void;
   setRadiusKm: (radiusKm: number) => void;
   setDestination: (destination: string) => void;
   setTourDays: (days: number) => void;
@@ -34,7 +34,7 @@ export const useDiscoverStore = create<DiscoverState>((set) => ({
   setSearchMode: (searchMode) => set({ searchMode }),
   toggleRealm: (realm) =>
     set((state) => ({ selectedRealm: state.selectedRealm === realm ? null : realm, selectedSport: null })),
-  toggleSport: (sport) => set((state) => ({ selectedSport: state.selectedSport === sport ? null : sport })),
+  setSport: (selectedSport) => set({ selectedSport }),
   setRadiusKm: (radiusKm) => set({ radiusKm }),
   setDestination: (destination) => set({ destination }),
   setTourDays: (tourDays) => set({ tourDays }),

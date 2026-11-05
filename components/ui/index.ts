@@ -2,6 +2,7 @@ export { Screen, WIDE_BREAKPOINT, TAB_BAR_HEIGHT } from "./Screen";
 export { Terrain } from "./Terrain";
 export { Button, IconButton } from "./Button";
 export { Chip, SegmentedControl } from "./Chip";
+export { Select } from "./Select";
 export { Card, Tag } from "./Surface";
 export { Eyebrow, PageHeader, SectionHeader } from "./Typography";
 export { TextField } from "./TextField";

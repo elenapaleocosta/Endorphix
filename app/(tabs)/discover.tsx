@@ -1,5 +1,5 @@
 import { Children, useState, type ReactNode } from "react";
-import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useShallow } from "zustand/react/shallow";
@@ -28,9 +28,9 @@ import {
   Screen,
   SectionHeader,
   SegmentedControl,
+  Select,
   Tag,
   TextField,
-  WIDE_BREAKPOINT,
 } from "@/components/ui";
 import type { SearchMode, TourDay } from "@/types";
 
@@ -70,17 +70,16 @@ function FilterGroup({ label, children }: { label: string; children: ReactNode }
 
 function SportFirst() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
   const userLocation = useLocationStore((s) => s.userLocation);
   const locationStatus = useLocationStore((s) => s.status);
-  const { selectedRealm, selectedSport, radiusKm, toggleRealm, toggleSport, setRadiusKm, clearFilters } =
+  const { selectedRealm, selectedSport, radiusKm, toggleRealm, setSport, setRadiusKm, clearFilters } =
     useDiscoverStore(
       useShallow((s) => ({
         selectedRealm: s.selectedRealm,
         selectedSport: s.selectedSport,
         radiusKm: s.radiusKm,
         toggleRealm: s.toggleRealm,
-        toggleSport: s.toggleSport,
+        setSport: s.setSport,
         setRadiusKm: s.setRadiusKm,
         clearFilters: s.clearFilters,
       })),
@@ -91,15 +90,6 @@ function SportFirst() {
 
   const sports = selectedRealm ? SPORTS.filter((s) => s.realm === selectedRealm) : SPORTS;
   const hasFilters = Boolean(selectedRealm || selectedSport) || radiusKm !== MAX_RADIUS_KM;
-
-  const sportChips = sports.map((sport) => (
-    <Chip
-      key={sport.id}
-      label={sport.label}
-      selected={selectedSport === sport.id}
-      onPress={() => toggleSport(sport.id)}
-    />
-  ));
 
   let results: ReactNode;
   if (isPending) {
@@ -154,13 +144,13 @@ function SportFirst() {
       </FilterGroup>
 
       <FilterGroup label="Sport">
-        {width >= WIDE_BREAKPOINT ? (
-          <View className="flex-row flex-wrap gap-2">{sportChips}</View>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {sportChips}
-          </ScrollView>
-        )}
+        <Select
+          accessibilityLabel="Sport"
+          placeholder="Any sport"
+          options={sports.map((sport) => ({ value: sport.id, label: sport.label }))}
+          value={selectedSport}
+          onChange={setSport}
+        />
       </FilterGroup>
 
       <FilterGroup label="Radius">
