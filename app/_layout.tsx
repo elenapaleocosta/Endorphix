@@ -3,13 +3,12 @@ import { useEffect } from "react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import {
-  useFonts,
-  Urbanist_600SemiBold,
-  Urbanist_700Bold,
-  Urbanist_800ExtraBold,
-} from "@expo-google-fonts/urbanist";
-import { Archivo_800ExtraBold } from "@expo-google-fonts/archivo";
+import { useFonts } from "expo-font";
+// Per-weight entry points: the packages' main index would bundle every weight (thin to black, plus italics).
+import { Urbanist_600SemiBold } from "@expo-google-fonts/urbanist/600SemiBold";
+import { Urbanist_700Bold } from "@expo-google-fonts/urbanist/700Bold";
+import { Urbanist_800ExtraBold } from "@expo-google-fonts/urbanist/800ExtraBold";
+import { Archivo_800ExtraBold } from "@expo-google-fonts/archivo/800ExtraBold";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { queryClient } from "@/lib/query-client";
