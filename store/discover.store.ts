@@ -1,16 +1,15 @@
 import { create } from "zustand";
 import { MAX_RADIUS_KM } from "@/constants";
-import type { MacroRealm, SearchMode, SportCategory, TourPlan } from "@/types";
+import type { MacroRealm, SportCategory, TourPlan } from "@/types";
 
+/** Shared by the Discover tab (realm, sport, radius) and the Travel tab (destination, stay, plan). */
 interface DiscoverState {
-  searchMode: SearchMode;
   selectedRealm: MacroRealm | null;
   selectedSport: SportCategory | null;
   radiusKm: number;
   destination: string;
   tourDays: number;
   tourPlan: TourPlan | null;
-  setSearchMode: (mode: SearchMode) => void;
   /** Selecting the active realm again clears it. Changing realm always clears the sport. */
   toggleRealm: (realm: MacroRealm) => void;
   /** null clears the sport ("any sport"). */
@@ -23,7 +22,6 @@ interface DiscoverState {
 }
 
 export const useDiscoverStore = create<DiscoverState>((set) => ({
-  searchMode: "sport-first",
   selectedRealm: null,
   selectedSport: null,
   radiusKm: MAX_RADIUS_KM,
@@ -31,7 +29,6 @@ export const useDiscoverStore = create<DiscoverState>((set) => ({
   tourDays: 3,
   tourPlan: null,
 
-  setSearchMode: (searchMode) => set({ searchMode }),
   toggleRealm: (realm) =>
     set((state) => ({ selectedRealm: state.selectedRealm === realm ? null : realm, selectedSport: null })),
   setSport: (selectedSport) => set({ selectedSport }),

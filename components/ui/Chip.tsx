@@ -50,6 +50,8 @@ interface SegmentOption<T extends string> {
   value: T;
   label: string;
   hint?: string;
+  /** Spoken label when the visible one is abbreviated (e.g. "1W" read as "Last 7 days"). */
+  accessibilityLabel?: string;
 }
 
 interface SegmentedControlProps<T extends string> {
@@ -77,6 +79,7 @@ export function SegmentedControl<T extends string>({
           <Pressable
             key={option.value}
             accessibilityRole="tab"
+            accessibilityLabel={option.accessibilityLabel}
             accessibilityState={{ selected }}
             onPress={() => {
               if (selected) return;

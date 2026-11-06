@@ -6,7 +6,6 @@ import { Colors } from "@/constants";
 
 export default function Index() {
   const authReady = useAuthStore((s) => s.hydrated);
-  const signedIn = useAuthStore((s) => s.user !== null);
   const onboardingReady = useOnboardingStore((s) => s.hydrated);
   const hasCompletedFTUE = useOnboardingStore((s) => s.hasCompletedFTUE);
 
@@ -19,6 +18,6 @@ export default function Index() {
   }
 
   if (!hasCompletedFTUE) return <Redirect href="/(onboarding)" />;
-  if (!signedIn) return <Redirect href="/(auth)/sign-in" />;
+  // Signed in or not, Discover is the start: guests browse first and sign up when they book.
   return <Redirect href="/(tabs)/discover" />;
 }

@@ -199,8 +199,6 @@ export interface TourPlan {
 
 // ─── Discover Search Params ───────────────────────────────────────────────────
 
-export type SearchMode = "sport-first" | "destination-first";
-
 export interface SportFirstParams {
   realm?: MacroRealm;
   sport?: SportCategory;

@@ -26,6 +26,7 @@ function EditProfileForm({ user }: { user: User }) {
   const initial = {
     displayName: user.display_name || [user.first_name, user.last_name].filter(Boolean).join(" "),
     username: user.username,
+    nickname: user.nickname ?? "",
     bio: user.bio ?? "",
     avatarUrl: user.avatar_url,
   };
@@ -36,9 +37,11 @@ function EditProfileForm({ user }: { user: User }) {
   const dirty = (Object.keys(initial) as (keyof typeof initial)[]).some((key) => form[key] !== initial[key]);
   const close = () => goBackOr(router, "/(tabs)/profile");
 
-  const update = (field: "displayName" | "username" | "bio") => (value: string) => {
+  const update = (field: "displayName" | "username" | "nickname" | "bio") => (value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-    if (field !== "bio" && errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+    if ((field === "displayName" || field === "username") && errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
   };
 
   const choosePhoto = async () => {
@@ -73,6 +76,7 @@ function EditProfileForm({ user }: { user: User }) {
       first_name: firstName,
       last_name: rest.join(" ") || undefined,
       username,
+      nickname: form.nickname.trim() || undefined,
       bio: form.bio.trim() || undefined,
       avatar_url: form.avatarUrl,
     });
@@ -137,6 +141,15 @@ function EditProfileForm({ user }: { user: User }) {
           autoCorrect={false}
           autoComplete="username"
           textContentType="username"
+        />
+        <TextField
+          label="Nickname (optional)"
+          value={form.nickname}
+          onChangeText={update("nickname")}
+          hint="Shown under your name on your passport."
+          autoCapitalize="words"
+          autoComplete="nickname"
+          textContentType="nickname"
         />
         <TextField
           label="Bio"

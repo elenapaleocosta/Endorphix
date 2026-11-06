@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { toIsoDate } from "@/utils";
 import type { Booking } from "@/types";
 
@@ -90,36 +92,47 @@ const SEED_BOOKINGS: Booking[] = [
   }),
 ];
 
-export const useBookingStore = create<BookingState>((set) => ({
-  bookings: SEED_BOOKINGS,
-  alertBookingId: null,
+// Persisted so a reserved slot survives a reload or app restart. The check-in banner is not:
+// it belongs to the moment, so a restart shouldn't bring it back.
+export const useBookingStore = create<BookingState>()(
+  persist(
+    (set) => ({
+      bookings: SEED_BOOKINGS,
+      alertBookingId: null,
 
-  createBooking: (input) => {
-    const booking: Booking = {
-      ...input,
-      id: `booking-${Date.now()}`,
-      status: "confirmed",
-      created_at: new Date().toISOString(),
-    };
-    set((state) => ({ bookings: [booking, ...state.bookings] }));
-    return booking;
-  },
+      createBooking: (input) => {
+        const booking: Booking = {
+          ...input,
+          id: `booking-${Date.now()}`,
+          status: "confirmed",
+          created_at: new Date().toISOString(),
+        };
+        set((state) => ({ bookings: [booking, ...state.bookings] }));
+        return booking;
+      },
 
-  completeSession: (bookingId) =>
-    set((state) => ({
-      bookings: state.bookings.map((b) => (b.id === bookingId ? { ...b, status: "completed" } : b)),
-      alertBookingId: bookingId,
-    })),
+      completeSession: (bookingId) =>
+        set((state) => ({
+          bookings: state.bookings.map((b) => (b.id === bookingId ? { ...b, status: "completed" } : b)),
+          alertBookingId: bookingId,
+        })),
 
-  dismissAlert: () => set({ alertBookingId: null }),
+      dismissAlert: () => set({ alertBookingId: null }),
 
-  markEnergyLogged: (bookingId, score) =>
-    set((state) => ({
-      bookings: state.bookings.map((b) =>
-        b.id === bookingId ? { ...b, status: "energy_logged", logged_energy_score: score } : b,
-      ),
-      alertBookingId: state.alertBookingId === bookingId ? null : state.alertBookingId,
-    })),
+      markEnergyLogged: (bookingId, score) =>
+        set((state) => ({
+          bookings: state.bookings.map((b) =>
+            b.id === bookingId ? { ...b, status: "energy_logged", logged_energy_score: score } : b,
+          ),
+          alertBookingId: state.alertBookingId === bookingId ? null : state.alertBookingId,
+        })),
 
-  reset: () => set({ bookings: [], alertBookingId: null }),
-}));
+      reset: () => set({ bookings: [], alertBookingId: null }),
+    }),
+    {
+      name: "endorphix-bookings",
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: ({ bookings }) => ({ bookings }),
+    },
+  ),
+);

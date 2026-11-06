@@ -1,5 +1,5 @@
-import { Children, useState, type ReactNode } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Children, type ReactNode } from "react";
+import { Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useShallow } from "zustand/react/shallow";
@@ -11,15 +11,12 @@ import {
   RADIUS_OPTIONS_KM,
   SPORTS,
 } from "@/constants";
-import { generateDestinationActionPackages } from "@/lib/geo-services";
-import { haptics } from "@/lib/haptics";
 import { useNearbyFacilities } from "@/hooks/useFacilities";
 import { useDiscoverStore } from "@/store/discover.store";
 import { useLocationStore } from "@/store/location.store";
 import { FacilityCard, FacilityCardSkeleton } from "@/components/FacilityCard";
 import {
   Button,
-  Card,
   Chip,
   EmptyState,
   ErrorState,
@@ -27,34 +24,15 @@ import {
   PageHeader,
   Screen,
   SectionHeader,
-  SegmentedControl,
   Select,
-  Tag,
-  TextField,
 } from "@/components/ui";
-import type { SearchMode, TourDay } from "@/types";
 
-const MODES: { value: SearchMode; label: string; hint: string }[] = [
-  { value: "sport-first", label: "Sport first", hint: `Venues within ${MAX_RADIUS_KM} km` },
-  { value: "destination-first", label: "Destination first", hint: "Multi-day trips" },
-];
-
-const STAY_OPTIONS = [1, 2, 3, 5, 7];
-
+/** Sport first: venues near you, filtered by realm, sport and radius. Trip planning lives in the Travel tab. */
 export default function DiscoverScreen() {
-  const searchMode = useDiscoverStore((s) => s.searchMode);
-  const setSearchMode = useDiscoverStore((s) => s.setSearchMode);
-
   return (
     <Screen width="wide" inTabs>
-      <PageHeader eyebrow="endorphix" title="Discover" />
-      <SegmentedControl
-        accessibilityLabel="Search mode"
-        options={MODES}
-        value={searchMode}
-        onChange={setSearchMode}
-      />
-      <View className="mt-6">{searchMode === "sport-first" ? <SportFirst /> : <DestinationFirst />}</View>
+      <PageHeader eyebrow="endorphix" title="Discover" subtitle={`Venues within ${MAX_RADIUS_KM} km of you.`} />
+      <SportFirst />
     </Screen>
   );
 }
@@ -192,116 +170,5 @@ function ResultsGrid({ children }: { children: ReactNode }) {
         <View className="w-full p-2 sm:w-1/2 lg:w-1/3">{child}</View>
       ))}
     </View>
-  );
-}
-
-function DestinationFirst() {
-  const { destination, tourDays, tourPlan, setDestination, setTourDays, setTourPlan } = useDiscoverStore(
-    useShallow((s) => ({
-      destination: s.destination,
-      tourDays: s.tourDays,
-      tourPlan: s.tourPlan,
-      setDestination: s.setDestination,
-      setTourDays: s.setTourDays,
-      setTourPlan: s.setTourPlan,
-    })),
-  );
-  const [error, setError] = useState<string>();
-
-  const buildPlan = () => {
-    if (!destination.trim()) {
-      setError("Enter a destination.");
-      haptics.error();
-      return;
-    }
-    setTourPlan(
-      generateDestinationActionPackages(destination.trim(), tourDays, MAX_RADIUS_KM, ["land", "water", "mountain"]),
-    );
-    haptics.success();
-  };
-
-  return (
-    <>
-      <Card className="gap-5">
-        <TextField
-          label="Destination"
-          value={destination}
-          onChangeText={(value) => {
-            setDestination(value);
-            setError(undefined);
-          }}
-          error={error}
-          placeholder="e.g. St. Moritz, Monaco, Mallorca"
-          returnKeyType="go"
-          onSubmitEditing={buildPlan}
-        />
-        <View className="gap-2">
-          <Text className="text-sm font-semibold text-fg">Length of stay</Text>
-          <View className="flex-row gap-2">
-            {STAY_OPTIONS.map((days) => (
-              <Chip
-                key={days}
-                grow
-                label={`${days}d`}
-                accessibilityLabel={`${days} ${days === 1 ? "day" : "days"}`}
-                selected={tourDays === days}
-                onPress={() => setTourDays(days)}
-              />
-            ))}
-          </View>
-        </View>
-        <Button label="Build my itinerary" icon="map-outline" onPress={buildPlan} />
-      </Card>
-
-      {tourPlan ? (
-        <View className="mt-8">
-          <SectionHeader title={`${tourPlan.days}-day plan · ${tourPlan.destination}`} />
-          <Text className="-mt-1 mb-2 text-sm text-fg-muted">Sessions are drawn from endorphix partner venues.</Text>
-          <View className="-mx-2 flex-row flex-wrap">
-            {tourPlan.tour_days.map((day) => (
-              <View key={day.day} className="w-full p-2 md:w-1/2">
-                <TourDayCard day={day} />
-              </View>
-            ))}
-          </View>
-        </View>
-      ) : null}
-    </>
-  );
-}
-
-function TourDayCard({ day }: { day: TourDay }) {
-  const router = useRouter();
-  return (
-    <Card>
-      <Eyebrow tone="accent">Day {day.day}</Eyebrow>
-      <Text className="mt-1 text-lg font-bold text-fg">{day.theme}</Text>
-      <View className="mt-3 gap-3">
-        {day.activities.map((activity) => (
-          <Pressable
-            key={activity.title}
-            accessibilityRole="button"
-            accessibilityHint={`Opens ${activity.facility.name}`}
-            onPress={() => {
-              haptics.tap();
-              router.push(`/facility/${activity.facility.id}`);
-            }}
-            className="rounded-xl border border-line bg-raised p-3 active:scale-[0.98]"
-          >
-            <View className="flex-row items-start justify-between gap-2">
-              <Text className="min-w-0 flex-1 text-sm font-bold text-fg">{activity.title}</Text>
-              <Tag label={activity.intensity} tone={activity.intensity === "Recovery" ? "neutral" : "highlight"} />
-            </View>
-            <Text className="mt-1 text-sm leading-5 text-fg-muted">{activity.description}</Text>
-            <View className="mt-2 flex-row items-center gap-1">
-              <Text numberOfLines={1} className="min-w-0 flex-1 text-sm font-semibold text-accent">
-                {activity.facility.name}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={Colors.accent} />
-            </View>
-          </Pressable>
-        ))}
-      </View>
-    </Card>
   );
 }

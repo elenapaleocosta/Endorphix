@@ -3,7 +3,7 @@ import { Image, Pressable, Text, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Colors, MACRO_REALMS, SPORT_BY_ID } from "@/constants";
-import { formatSessionDay } from "@/utils";
+import { formatSessionDay, scoreTone } from "@/utils";
 import { haptics } from "@/lib/haptics";
 import { showAlert } from "@/lib/alert";
 import { useEnergyLogs, useEnergyWave } from "@/hooks/useEnergy";
@@ -12,7 +12,7 @@ import { useBookingStore } from "@/store/booking.store";
 import { useOnboardingStore } from "@/store/onboarding.store";
 import { EnergyWaveChart } from "@/components/EnergyWaveChart";
 import { SportBreakdown } from "@/components/SportBreakdown";
-import { Button, Card, Eyebrow, ListRow, Screen, SectionHeader } from "@/components/ui";
+import { Button, Card, Eyebrow, ListRow, PageHeader, Screen, SectionHeader } from "@/components/ui";
 import type { Booking, MacroRealm, User } from "@/types";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
@@ -60,7 +60,7 @@ export default function PassportScreen() {
   const mix = useMemo(() => realmMix(bookings), [bookings]);
   const peak = logs.data?.length ? Math.max(...logs.data.map((l) => l.energy_score)) : null;
 
-  if (!user) return null;
+  if (!user) return <SignedOutPassport />;
 
   const openLogger = (bookingId?: string) =>
     router.push(bookingId ? { pathname: "/energy/modal", params: { bookingId } } : "/energy/modal");
@@ -164,11 +164,7 @@ export default function PassportScreen() {
                 title={booking.facility_name}
                 subtitle={`${booking.activity_name} · ${formatSessionDay(booking.date)}`}
                 last={i === history.length - 1}
-                trailing={
-                  <View className="rounded-md bg-accent px-2 py-1">
-                    <Text className="text-sm font-bold text-canvas">{booking.logged_energy_score}</Text>
-                  </View>
-                }
+                trailing={<ScoreBadge score={booking.logged_energy_score} />}
               />
             ))}
           </Card>
@@ -179,10 +175,15 @@ export default function PassportScreen() {
         <View className="mt-8">
           <SectionHeader title="Realm mix" />
           <Card>
-            <View className="h-2.5 flex-row overflow-hidden rounded-full bg-line">
+            {/* A small gap between segments so neighbouring realms never run into each other. */}
+            <View className="h-2.5 flex-row gap-1">
               {mix.map((realm) =>
                 realm.share ? (
-                  <View key={realm.id} style={{ flex: realm.share, backgroundColor: realm.accent }} />
+                  <View
+                    key={realm.id}
+                    className="rounded-full"
+                    style={{ flex: realm.share, backgroundColor: realm.accent }}
+                  />
                 ) : null,
               )}
             </View>
@@ -224,8 +225,57 @@ export default function PassportScreen() {
       <View className="mt-6 gap-3">
         <Button label="Sign out" icon="log-out-outline" variant="danger" onPress={handleSignOut} />
         {__DEV__ ? (
-          <Button label="Replay onboarding (dev)" variant="link" onPress={resetFTUE} />
+          <Button
+            label="Replay onboarding (dev)"
+            variant="link"
+            onPress={() => {
+              // Clearing the flag alone does nothing visible: the intro is only shown by the launch redirect.
+              resetFTUE();
+              router.replace("/(onboarding)");
+            }}
+          />
         ) : null}
+      </View>
+    </Screen>
+  );
+}
+
+/** Endorphin score, tinted red (low) to green (high): a faint fill, a soft border and the number in the hue. */
+function ScoreBadge({ score }: { score?: number }) {
+  if (score === undefined) return null;
+  const tone = scoreTone(score);
+  return (
+    <View
+      accessibilityLabel={`Endorphin score ${score} out of 100`}
+      className="min-w-10 items-center rounded-md border px-2 py-1"
+      style={{ backgroundColor: tone.bg, borderColor: tone.border }}
+    >
+      <Text className="text-sm font-bold" style={{ color: tone.fg }}>
+        {score}
+      </Text>
+    </View>
+  );
+}
+
+/** Guests reach this tab before they have an account: say what it holds and offer the way in. */
+function SignedOutPassport() {
+  const router = useRouter();
+  const authHref = (pathname: "/(auth)/sign-up" | "/(auth)/sign-in") => ({
+    pathname,
+    params: { next: "/(tabs)/profile" },
+  });
+
+  return (
+    <Screen inTabs width="narrow">
+      <PageHeader
+        eyebrow="Vitality passport"
+        title="Your passport"
+        subtitle="Create a passport to book slots, rate how you feel after each session and track your streaks."
+      />
+      <Button label="Create passport" size="lg" onPress={() => router.push(authHref("/(auth)/sign-up"))} />
+      <View className="mt-2 flex-row flex-wrap items-center justify-center gap-1">
+        <Text className="text-sm text-fg-muted">Already have a passport?</Text>
+        <Button label="Sign in" variant="link" onPress={() => router.push(authHref("/(auth)/sign-in"))} />
       </View>
     </Screen>
   );

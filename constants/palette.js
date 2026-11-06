@@ -37,6 +37,18 @@ const palette = {
   highlightInk: "#B3C1CB",
   /** Muted rose, the one warm note, kept for errors so they never blend into the steel. */
   danger: "#E39A96",
+
+  /**
+   * Realm colours: the one place the theme leaves the steel, so the three realms read apart at a glance
+   * (realm mix bar, realm dots on chips, tags and cards). Each is at least 4.4:1 on surface, and they stay
+   * distinguishable under deuteranopia (checked with the Machado 2009 simulation).
+   */
+  /** Ocean blue. */
+  realmWater: "#4FA9E0",
+  /** Clay-court terracotta. */
+  realmLand: "#E08A4B",
+  /** Alpine mint. */
+  realmMountain: "#7FD49A",
 };
 
 module.exports = { palette };

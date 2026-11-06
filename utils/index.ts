@@ -21,6 +21,47 @@ export function energyBand(score: number): EnergyBand {
   return ENERGY_BANDS.find((band) => score >= band.min) ?? ENERGY_BANDS[ENERGY_BANDS.length - 1];
 }
 
+const hexToRgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+const rgbToHex = (rgb: number[]) => `#${rgb.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
+
+function hslToHex(h: number, s: number, l: number) {
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return 255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)));
+  };
+  return rgbToHex([f(0), f(8), f(4)]);
+}
+
+/** Opaque blend of `color` over `base` (no alpha, so the contour backdrop never shows through). */
+function blend(color: string, base: string, amount: number) {
+  const c = hexToRgb(color);
+  const b = hexToRgb(base);
+  return rgbToHex(c.map((v, i) => b[i] + (v - b[i]) * amount));
+}
+
+export interface ScoreTone {
+  fg: string;
+  bg: string;
+  border: string;
+}
+
+/** Bends the score → hue curve so only the very top reads fully green and everything lower leans red. */
+const SCORE_HUE_CURVE = 3.5;
+
+/**
+ * Endorphin score (1–100) on a red → amber → green scale, for score badges. The hue runs 0° → 130° along a
+ * curve, not a straight line: most scores here sit in the 80s and 90s, and a straight line paints 88 and 99
+ * the same green. With the curve, 99 ≈ 126° (green), 95 ≈ 109°, 88 ≈ 83° (yellow-lime), 75 ≈ 47° (amber),
+ * 65 ≈ 29° (orange) and 50 or below is red. The text colour stays above 4.5:1 on its own faint tint at every score, and the
+ * number is always shown, so colour is never the only signal.
+ */
+export function scoreTone(score: number): ScoreTone {
+  const t = Math.min(100, Math.max(0, score)) / 100;
+  const fg = hslToHex(t ** SCORE_HUE_CURVE * 130, 0.7, 0.76);
+  return { fg, bg: blend(fg, Colors.surface, 0.12), border: blend(fg, Colors.surface, 0.4) };
+}
+
 export function formatDistance(meters?: number): string | null {
   if (meters === undefined) return null;
   if (meters < 1000) return `${Math.round(meters)} m`;

@@ -6,7 +6,11 @@ import { Terrain } from "./Terrain";
 
 /** Width ≥ this switches to the tablet/desktop layout (floating tab bar, multi-column grids). */
 export const WIDE_BREAKPOINT = 640;
-export const TAB_BAR_HEIGHT = 64;
+/**
+ * Tall enough for each tab's own 5px padding, the 28px icon box and a 14px label, plus 6px bar padding
+ * top and bottom. At 64px with 8px padding the label box was squeezed to 9px and its text was clipped.
+ */
+export const TAB_BAR_HEIGHT = 68;
 
 const MAX_WIDTH = {
   narrow: "max-w-xl",

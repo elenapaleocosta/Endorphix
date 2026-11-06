@@ -1,8 +1,15 @@
 import { useMemo, useState, Fragment } from "react";
 import { Text, View } from "react-native";
-import Svg, { Circle, Line, Path, Text as SvgText } from "react-native-svg";
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop, Text as SvgText } from "react-native-svg";
 import { Colors } from "@/constants";
-import { energyBand } from "@/utils";
+import { energyBand, scoreTone } from "@/utils";
+
+/**
+ * Stops for a vertical gradient on the wave line, sampled from the same red → green score scale as the
+ * Recent sessions badges. Offset 0 is the top of the plot (score 100), 1 the baseline (score 0), so the
+ * line takes the colour of whatever score it passes through.
+ */
+const WAVE_STOPS = Array.from({ length: 11 }, (_, i) => ({ offset: i / 10, color: scoreTone(100 - i * 10).fg }));
 import { Card, EmptyState, ErrorState, Eyebrow, Skeleton } from "@/components/ui";
 import type { EnergyWaveDataPoint } from "@/types";
 
@@ -48,7 +55,7 @@ function buildGeometry(data: EnergyWaveDataPoint[], width: number) {
   const peak = points.reduce((max, p) => (p.score > max.score ? p : max), points[0]);
   const labelEvery = Math.max(1, Math.ceil(points.length / Math.max(1, Math.floor(width / MIN_LABEL_SPACING))));
 
-  return { points, line, area, peak, labelEvery, gridY: [25, 50, 75].map(yFor) };
+  return { points, line, area, peak, labelEvery, gridY: [25, 50, 75].map(yFor), top: yFor(100), bottom: yFor(0) };
 }
 
 interface EnergyWaveChartProps {
@@ -80,6 +87,7 @@ export function EnergyWaveChart({ data, isLoading, isError, onRetry, onLogFirst 
 
   const average = Math.round(points.reduce((sum, p) => sum + p.score, 0) / points.length);
   const band = energyBand(average);
+  const averageColor = scoreTone(average).fg;
 
   return (
     <Card>
@@ -88,7 +96,7 @@ export function EnergyWaveChart({ data, isLoading, isError, onRetry, onLogFirst 
         <Text className="text-3xl font-numeral text-fg">{average}</Text>
         <Text className="text-sm text-fg-muted">average</Text>
         <View className="flex-row items-center gap-1.5">
-          <View className="h-2 w-2 rounded-full" style={{ backgroundColor: band.color }} />
+          <View className="h-2 w-2 rounded-full" style={{ backgroundColor: averageColor }} />
           <Text className="text-sm font-semibold text-fg">{band.label}</Text>
         </View>
       </View>
@@ -104,12 +112,26 @@ export function EnergyWaveChart({ data, isLoading, isError, onRetry, onLogFirst 
       >
         {geometry ? (
           <Svg width={width} height={HEIGHT}>
+            <Defs>
+              <LinearGradient
+                id="wave-score"
+                gradientUnits="userSpaceOnUse"
+                x1={0}
+                x2={0}
+                y1={geometry.top}
+                y2={geometry.bottom}
+              >
+                {WAVE_STOPS.map((stop) => (
+                  <Stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
+                ))}
+              </LinearGradient>
+            </Defs>
             {geometry.gridY.map((y) => (
               <Line key={y} x1={PAD_X} x2={width - PAD_X} y1={y} y2={y} stroke={Colors.line} strokeDasharray="4 4" />
             ))}
             {geometry.area ? <Path d={geometry.area} fill={Colors.accent} fillOpacity={0.1} /> : null}
             {geometry.line ? (
-              <Path d={geometry.line} fill="none" stroke={Colors.accent} strokeWidth={2.5} strokeLinecap="round" />
+              <Path d={geometry.line} fill="none" stroke="url(#wave-score)" strokeWidth={2.5} strokeLinecap="round" />
             ) : null}
             {geometry.points.map((p, i) => {
               const isPeak = p === geometry.peak;
@@ -121,7 +143,7 @@ export function EnergyWaveChart({ data, isLoading, isError, onRetry, onLogFirst 
                     cx={p.x}
                     cy={p.y}
                     r={isPeak ? 5 : 3.5}
-                    fill={isPeak ? Colors.highlight : Colors.accent}
+                    fill={scoreTone(p.score).fg}
                     stroke={Colors.surface}
                     strokeWidth={1.5}
                   />
@@ -138,7 +160,7 @@ export function EnergyWaveChart({ data, isLoading, isError, onRetry, onLogFirst 
               y={Math.max(geometry.peak.y - 10, 12)}
               fontSize={11}
               fontWeight="700"
-              fill={Colors.highlightInk}
+              fill={scoreTone(geometry.peak.score).fg}
               textAnchor="middle"
             >
               {`Peak ${geometry.peak.score}`}

@@ -8,6 +8,7 @@ import { haptics } from "@/lib/haptics";
 import { openDirections } from "@/lib/maps";
 import { goBackOr } from "@/lib/navigation";
 import { FacilityNotFoundError, useFacilityDetail } from "@/hooks/useFacilities";
+import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
 import { TimetableCard } from "@/components/TimetableCard";
 import {
@@ -31,6 +32,17 @@ const SLOTS = [
   { start: "16:30", end: "17:30", label: "Court 1" },
   { start: "18:00", end: "19:00", label: "Court 3" },
 ];
+
+const toMinutes = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+};
+
+/** Today's slots that haven't started yet; a slot already under way can't be booked. */
+function openSlots(now = new Date()) {
+  const current = now.getHours() * 60 + now.getMinutes();
+  return SLOTS.map((slot) => toMinutes(slot.start) > current);
+}
 
 export default function FacilityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -112,7 +124,13 @@ function FacilityDetail({ facility }: { facility: Facility }) {
       ) : null}
 
       <View className="mt-5 flex-row flex-wrap gap-2">
-        <Button label="Directions" icon="navigate-outline" size="sm" onPress={() => openDirections(facility)} />
+        <Button
+          label="Directions"
+          icon="navigate-outline"
+          size="sm"
+          variant="secondary"
+          onPress={() => openDirections(facility)}
+        />
         {facility.phone ? (
           <Button
             label="Call"
@@ -131,6 +149,12 @@ function FacilityDetail({ facility }: { facility: Facility }) {
             onPress={() => Linking.openURL(facility.website!)}
           />
         ) : null}
+      </View>
+
+      {/* Booking is why people open a venue, so it comes before the reading material. */}
+      <View className="mt-8">
+        <SectionHeader title="Book a slot" />
+        <BookingPanel facility={facility} />
       </View>
 
       {facility.description ? (
@@ -158,11 +182,6 @@ function FacilityDetail({ facility }: { facility: Facility }) {
       ) : null}
 
       <View className="mt-8">
-        <SectionHeader title="Book a slot" />
-        <BookingPanel facility={facility} />
-      </View>
-
-      <View className="mt-8">
         <SectionHeader title="Opening hours" />
         <TimetableCard timetable={facility.timetable} />
       </View>
@@ -171,10 +190,12 @@ function FacilityDetail({ facility }: { facility: Facility }) {
 }
 
 function BookingPanel({ facility }: { facility: Facility }) {
+  const router = useRouter();
+  const signedIn = useAuthStore((s) => s.user !== null);
   const createBooking = useBookingStore((s) => s.createBooking);
   const completeSession = useBookingStore((s) => s.completeSession);
   const [sport, setSport] = useState(facility.primary_sports[0] ?? "other");
-  const [slotIndex, setSlotIndex] = useState(0);
+  const [slotIndex, setSlotIndex] = useState(() => openSlots().indexOf(true));
   const [bookingId, setBookingId] = useState<string | null>(null);
   const booking = useBookingStore((s) => s.bookings.find((b) => b.id === bookingId));
 
@@ -203,8 +224,14 @@ function BookingPanel({ facility }: { facility: Facility }) {
     );
   }
 
+  // Re-checked on every render, so a slot that starts while the screen is open drops out.
+  const open = openSlots();
+  const selectedIndex = open[slotIndex] ? slotIndex : open.indexOf(true);
+  const anyOpen = selectedIndex !== -1;
+
   const reserve = () => {
-    const slot = SLOTS[slotIndex];
+    if (!openSlots()[selectedIndex]) return;
+    const slot = SLOTS[selectedIndex];
     const created = createBooking({
       facility_id: facility.id,
       facility_name: facility.name,
@@ -236,31 +263,50 @@ function BookingPanel({ facility }: { facility: Facility }) {
       <View accessibilityRole="radiogroup" accessibilityLabel="Time slot" className="gap-2">
         <Eyebrow>Today</Eyebrow>
         {SLOTS.map((slot, i) => {
-          const selected = i === slotIndex;
+          const selected = i === selectedIndex;
+          const started = !open[i];
           return (
             <Pressable
               key={`${slot.start}-${slot.label}`}
               accessibilityRole="radio"
-              accessibilityState={{ checked: selected }}
-              accessibilityLabel={`${slot.start} to ${slot.end}, ${slot.label}`}
+              accessibilityState={{ checked: selected, disabled: started }}
+              accessibilityLabel={`${slot.start} to ${slot.end}, ${slot.label}${started ? ", already started" : ""}`}
+              disabled={started}
               onPress={() => {
                 haptics.selection();
                 setSlotIndex(i);
               }}
               className={`min-h-12 flex-row items-center justify-between rounded-xl border px-4 py-3 ${
-                selected ? "border-accent bg-accent" : "border-line bg-raised"
+                selected ? "border-accent bg-accent" : started ? "border-line bg-surface" : "border-line bg-raised"
               }`}
             >
-              <Text className={`text-base font-bold ${selected ? "text-canvas" : "text-fg"}`}>
+              <Text
+                className={`text-base font-bold ${selected ? "text-canvas" : started ? "text-fg-faint line-through" : "text-fg"}`}
+              >
                 {slot.start} – {slot.end}
               </Text>
-              <Text className={`text-sm ${selected ? "text-canvas" : "text-fg-muted"}`}>{slot.label}</Text>
+              <Text className={`text-sm ${selected ? "text-canvas" : started ? "text-fg-faint" : "text-fg-muted"}`}>
+                {started ? "Started" : slot.label}
+              </Text>
             </Pressable>
           );
         })}
       </View>
 
-      <Button label="Reserve slot" icon="calendar-outline" onPress={reserve} />
+      {!anyOpen ? (
+        <Text className="text-sm text-fg-muted">Today's slots have all started. New slots open tomorrow.</Text>
+      ) : signedIn ? (
+        <Button label="Reserve slot" icon="calendar-outline" onPress={reserve} />
+      ) : (
+        <View className="gap-2">
+          <Button
+            label="Sign up to reserve"
+            icon="calendar-outline"
+            onPress={() => router.push({ pathname: "/(auth)/sign-up", params: { next: `/facility/${facility.id}` } })}
+          />
+          <Text className="text-center text-sm text-fg-muted">You'll come straight back to this slot.</Text>
+        </View>
+      )}
     </Card>
   );
 }

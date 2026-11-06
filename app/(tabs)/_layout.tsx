@@ -1,7 +1,8 @@
 import { type ComponentProps } from "react";
 import { ActivityIndicator, View, useWindowDimensions } from "react-native";
-import { Redirect, Tabs } from "expo-router";
+import { Tabs } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants";
 import { haptics } from "@/lib/haptics";
@@ -17,10 +18,15 @@ const tabIcon =
     <Ionicons name={focused ? active : inactive} size={22} color={color} />
   );
 
+// Ionicons has no suitcase (only a briefcase, which reads as work), so Travel borrows a travel bag
+// from Material Community Icons, drawn at the same size so it sits level with the other tabs.
+const travelIcon = ({ color, focused }: { color: string; focused: boolean }) => (
+  <MaterialCommunityIcons name={focused ? "bag-suitcase" : "bag-suitcase-outline"} size={22} color={color} />
+);
+
 export default function TabsLayout() {
   useDeviceLocation();
   const hydrated = useAuthStore((s) => s.hydrated);
-  const signedIn = useAuthStore((s) => s.user !== null);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
@@ -31,7 +37,7 @@ export default function TabsLayout() {
       </View>
     );
   }
-  if (!signedIn) return <Redirect href="/(auth)/sign-in" />;
+  // Guests can browse Discover and Spark; an account is asked for when they reserve a slot.
 
   const wide = width >= WIDE_BREAKPOINT;
   const capsuleWidth = Math.min(width - 32, 480);
@@ -43,7 +49,8 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: Colors.accent,
         tabBarInactiveTintColor: Colors.fgMuted,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "700" },
+        // An explicit line height so the label always gets a full line and is never clipped.
+        tabBarLabelStyle: { fontSize: 11, lineHeight: 14, fontWeight: "700" },
         tabBarStyle: wide
           ? {
               position: "absolute",
@@ -51,8 +58,8 @@ export default function TabsLayout() {
               left: (width - capsuleWidth) / 2,
               width: capsuleWidth,
               height: TAB_BAR_HEIGHT,
-              paddingTop: 8,
-              paddingBottom: 8,
+              paddingTop: 6,
+              paddingBottom: 6,
               borderRadius: 24,
               borderWidth: 1,
               borderColor: Colors.line,
@@ -60,14 +67,15 @@ export default function TabsLayout() {
             }
           : {
               height: TAB_BAR_HEIGHT + insets.bottom,
-              paddingTop: 8,
-              paddingBottom: insets.bottom + 8,
+              paddingTop: 6,
+              paddingBottom: insets.bottom + 6,
               borderTopColor: Colors.line,
               backgroundColor: Colors.canvas,
             },
       }}
     >
       <Tabs.Screen name="discover" options={{ title: "Discover", tabBarIcon: tabIcon("compass", "compass-outline") }} />
+      <Tabs.Screen name="travel" options={{ title: "Travel", tabBarIcon: travelIcon }} />
       <Tabs.Screen name="spark" options={{ title: "Spark", tabBarIcon: tabIcon("flash", "flash-outline") }} />
       <Tabs.Screen
         name="profile"

@@ -1,45 +1,80 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { Link, useRouter } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { haptics } from "@/lib/haptics";
+import { returnAfterAuth } from "@/lib/navigation";
 import { MIN_PASSWORD_LENGTH, compactErrors, emailError, errorMessage, requiredError } from "@/lib/validation";
 import { useAuthStore } from "@/store/auth.store";
 import { Button, PageHeader, Screen, TextField } from "@/components/ui";
 import type { User } from "@/types";
 
-type Field = "firstName" | "lastName" | "nickname" | "email" | "password";
+// Only what's needed to start. Nickname, bio and photo live in Edit profile.
+type Field = "name" | "email" | "password";
 type FormState = Record<Field, string>;
 
-const EMPTY_FORM: FormState = { firstName: "", lastName: "", nickname: "", email: "", password: "" };
+const EMPTY_FORM: FormState = { name: "", email: "", password: "" };
 
 function validate(form: FormState) {
   return compactErrors({
-    firstName: requiredError(form.firstName, "first name"),
-    lastName: requiredError(form.lastName, "surname"),
+    name: requiredError(form.name, "name"),
     email: emailError(form.email),
     password:
       form.password.length < MIN_PASSWORD_LENGTH ? `Use at least ${MIN_PASSWORD_LENGTH} characters.` : undefined,
   });
 }
 
-function toUsername(form: FormState) {
-  const base = form.nickname.trim() || `${form.firstName}_${form.lastName}`;
-  return base.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 24);
+function splitName(name: string) {
+  const [first = "", ...rest] = name.trim().split(/\s+/);
+  return { first, last: rest.join(" ") || undefined };
+}
+
+function toUsername(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 24) || "athlete";
 }
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const { next } = useLocalSearchParams<{ next?: string }>();
   const setUser = useAuthStore((s) => s.setUser);
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [notice, setNotice] = useState<{ tone: "error" | "info"; text: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /** Set once the account exists but the email still needs confirming. */
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState<{ tone: "error" | "info"; text: string } | null>(null);
+
+  const authParams = next ? { next } : {};
+
+  const resend = async () => {
+    if (!sentTo) return;
+    setResending(true);
+    setResendStatus(null);
+    try {
+      const { error } = await supabase.auth.resend({ type: "signup", email: sentTo });
+      if (error) throw error;
+      haptics.success();
+      setResendStatus({ tone: "info", text: "Sent again. It can take a minute to arrive; check spam too." });
+    } catch (err) {
+      haptics.error();
+      setResendStatus({ tone: "error", text: errorMessage(err, "Couldn't resend the email. Please try again.") });
+    } finally {
+      setResending(false);
+    }
+  };
 
   const update = (field: Field) => (value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  /** Checks a field as the user leaves it. Empty fields wait for submit, so tabbing past one isn't scolded. */
+  const check = (field: Field) => () => {
+    if (!form[field].trim()) return;
+    setErrors((prev) => ({ ...prev, [field]: validate(form)[field] }));
   };
 
   const handleSignUp = async () => {
@@ -52,13 +87,14 @@ export default function SignUpScreen() {
     }
 
     const now = new Date().toISOString();
+    const name = form.name.trim().replace(/\s+/g, " ");
+    const { first, last } = splitName(name);
     const profile: Omit<User, "id"> = {
       email: form.email.trim(),
-      username: toUsername(form),
-      first_name: form.firstName.trim(),
-      last_name: form.lastName.trim(),
-      nickname: form.nickname.trim() || undefined,
-      display_name: `${form.firstName.trim()} ${form.lastName.trim()}`,
+      username: toUsername(name),
+      first_name: first,
+      last_name: last,
+      display_name: name,
       streak_current: 0,
       streak_longest: 0,
       lifetime_sessions: 0,
@@ -80,13 +116,13 @@ export default function SignUpScreen() {
           email: profile.email,
           username: profile.username,
           first_name: profile.first_name,
-          last_name: profile.last_name,
-          nickname: profile.nickname ?? null,
+          last_name: profile.last_name ?? null,
         });
         if (insertError) throw insertError;
 
         if (!data.session) {
-          setNotice({ tone: "info", text: "Check your inbox to confirm your email, then sign in." });
+          haptics.success();
+          setSentTo(profile.email);
           return;
         }
         id = data.user.id;
@@ -94,7 +130,7 @@ export default function SignUpScreen() {
 
       setUser({ id, ...profile });
       haptics.success();
-      router.replace("/(tabs)/discover");
+      returnAfterAuth(router, next);
     } catch (err) {
       haptics.error();
       setNotice({ tone: "error", text: errorMessage(err, "Registration failed. Please try again.") });
@@ -102,6 +138,35 @@ export default function SignUpScreen() {
       setSubmitting(false);
     }
   };
+
+  if (sentTo) {
+    return (
+      <Screen width="narrow">
+        <PageHeader
+          eyebrow="Almost there"
+          title="Check your inbox."
+          subtitle={`We sent a confirmation link to ${sentTo}. Open it, then sign in with the password you just chose.`}
+        />
+        <Button
+          label="Go to sign in"
+          size="lg"
+          onPress={() => router.replace({ pathname: "/(auth)/sign-in", params: authParams })}
+        />
+        <View className="mt-4 items-center gap-1">
+          <Button label="Resend the email" variant="link" loading={resending} onPress={resend} />
+          <Button label="Use a different email" variant="link" onPress={() => setSentTo(null)} />
+        </View>
+        {resendStatus ? (
+          <Text
+            accessibilityRole="alert"
+            className={`mt-2 text-center text-sm font-medium ${resendStatus.tone === "error" ? "text-danger" : "text-fg"}`}
+          >
+            {resendStatus.text}
+          </Text>
+        ) : null}
+      </Screen>
+    );
+  }
 
   return (
     <Screen width="narrow">
@@ -112,43 +177,21 @@ export default function SignUpScreen() {
       />
 
       <View className="gap-4">
-        <View className="gap-4 sm:flex-row">
-          <View className="sm:flex-1">
-            <TextField
-              label="First name"
-              value={form.firstName}
-              onChangeText={update("firstName")}
-              error={errors.firstName}
-              autoCapitalize="words"
-              autoComplete="given-name"
-              textContentType="givenName"
-            />
-          </View>
-          <View className="sm:flex-1">
-            <TextField
-              label="Surname"
-              value={form.lastName}
-              onChangeText={update("lastName")}
-              error={errors.lastName}
-              autoCapitalize="words"
-              autoComplete="family-name"
-              textContentType="familyName"
-            />
-          </View>
-        </View>
         <TextField
-          label="Nickname (optional)"
-          value={form.nickname}
-          onChangeText={update("nickname")}
-          hint="Shown on your passport and used for your username."
+          label="Name"
+          value={form.name}
+          onChangeText={update("name")}
+          onBlur={check("name")}
+          error={errors.name}
           autoCapitalize="words"
-          autoComplete="nickname"
-          textContentType="nickname"
+          autoComplete="name"
+          textContentType="name"
         />
         <TextField
           label="Email"
           value={form.email}
           onChangeText={update("email")}
+          onBlur={check("email")}
           error={errors.email}
           placeholder="you@example.com"
           keyboardType="email-address"
@@ -160,6 +203,7 @@ export default function SignUpScreen() {
           label="Password"
           value={form.password}
           onChangeText={update("password")}
+          onBlur={check("password")}
           error={errors.password}
           hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
           secureTextEntry
@@ -183,7 +227,7 @@ export default function SignUpScreen() {
 
       <View className="mt-6 flex-row flex-wrap items-center justify-center gap-1">
         <Text className="text-sm text-fg-muted">Already have a passport?</Text>
-        <Link href="/(auth)/sign-in" asChild>
+        <Link href={{ pathname: "/(auth)/sign-in", params: authParams }} replace asChild>
           <Pressable accessibilityRole="link" className="min-h-10 justify-center px-1">
             <Text className="text-sm font-bold text-accent">Sign in</Text>
           </Pressable>
