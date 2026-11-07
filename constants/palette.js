@@ -1,46 +1,48 @@
 /**
  * Single source of truth for brand colours.
  * Consumed by tailwind.config.js (class names) and constants/index.ts (raw values
- * for SVG, Switch, ActivityIndicator and placeholder colours).
+ * for SVG, Switch, ActivityIndicator and placeholder colours). The splash and icon
+ * background in app.config.ts and the web fallbacks in global.css repeat `canvas` and
+ * `tintCool`: keep them in step when these change.
  *
- * Charcoal and steel: a dark, cool, quiet theme. Source colours are marked; every other
- * tone is generated from them. Steel is blue-grey with the violet and saturation removed.
- * Tokens are named by role, not hue. Text tones meet WCAG AA (4.5:1) on canvas, surface
- * and raised.
+ * Midnight Ice: the brief's near-black (#0A0A0F) with a blue cast, lit by a pale ice accent.
+ * Deep, matte and nocturnal. Source colours are marked; every other tone is generated from
+ * them. Tokens are named by role, not hue. Text tones meet WCAG AA (4.5:1) on canvas,
+ * surface and raised.
  */
 const palette = {
-  /** Source #26292B Charcoal: app background. */
-  canvas: "#26292B",
-  /** Source #2E3239 Slate: cards. */
-  surface: "#2E3239",
-  /** Slate lifted 10% toward Light Steel: inputs, secondary buttons, cards nested in a surface. */
-  raised: "#3B4048",
-  /** Slate lifted 28% toward Light Steel: hairlines, tracks, inactive indicators, contour lines. */
-  line: "#535A62",
-  /** Light Steel washed 78% toward white: primary text, cool to match the steel. */
-  fg: "#EEF1F4",
-  /** Text dimmed 28% toward Slate: secondary text. */
-  fgMuted: "#B8BCC0",
-  /** Text dimmed 36% toward Slate: tertiary text and placeholders. */
-  fgFaint: "#A9ACB1",
-  /** #B3C1CB Light Steel: primary actions, links and selected states (labels sit in canvas). */
-  accent: "#B3C1CB",
-  /** Light Steel muted 35% toward Slate: Land realm, the mid energy band, decorative marks. */
-  tint: "#848F98",
-  /** Light Steel: Water realm and the keyboard focus ring. */
-  tintCool: "#B3C1CB",
-  /** #7A92A3 Steel: the endorphin peak, Mountain realm, highlighted cards and tags. */
-  highlight: "#7A92A3",
-  /** Steel as the Spark button fill; its charcoal label is 4.5:1. */
-  highlightStrong: "#7A92A3",
-  /** Light Steel: the highlight when it is text or an icon. */
-  highlightInk: "#B3C1CB",
-  /** Muted rose, the one warm note, kept for errors so they never blend into the steel. */
-  danger: "#E39A96",
+  /** Source #0B0C10 Midnight: app background, the brief's #0A0A0F with a touch of blue. */
+  canvas: "#0B0C10",
+  /** Midnight lifted 5% toward Ice: cards. */
+  surface: "#14161C",
+  /** Midnight lifted 9% toward Ice: inputs, secondary buttons, cards nested in a surface. */
+  raised: "#1D2028",
+  /** Midnight lifted 18% toward Ice: hairlines, tracks, inactive indicators, contour lines. */
+  line: "#30343E",
+  /** Ice washed toward white: primary text (16.8:1 on canvas). */
+  fg: "#ECEEF2",
+  /** Text dimmed toward Midnight: secondary text (7:1 on raised). */
+  fgMuted: "#A6ABB6",
+  /** Text dimmed further: tertiary text and placeholders (5:1 on raised). */
+  fgFaint: "#8D929D",
+  /** Source #C7D0DB Ice: primary actions, links and selected states (labels sit in canvas, 12.5:1). */
+  accent: "#C7D0DB",
+  /** Ice muted 35% toward the surface: the mid energy band and decorative marks. */
+  tint: "#888F98",
+  /** Ice: the keyboard focus ring. */
+  tintCool: "#C7D0DB",
+  /** Source #8EA3BA Glacier: the endorphin peak, highlighted cards and tags. */
+  highlight: "#8EA3BA",
+  /** Glacier as the Spark button fill; its midnight label is 7.5:1. */
+  highlightStrong: "#8EA3BA",
+  /** Pale glacier: the highlight when it is text or an icon. */
+  highlightInk: "#BCC8D6",
+  /** Muted rose, the one warm note, kept for errors so they never blend into the ice. */
+  danger: "#E8A09B",
 
   /**
-   * Realm colours: the one place the theme leaves the steel, so the three realms read apart at a glance
-   * (realm mix bar, realm dots on chips, tags and cards). Each is at least 4.4:1 on surface, and they stay
+   * Realm colours: the one place the theme leaves the ice, so the three realms read apart at a glance
+   * (realm mix bar, realm dots on chips, tags and cards). Each is at least 6:1 on surface, and they stay
    * distinguishable under deuteranopia (checked with the Machado 2009 simulation).
    */
   /** Ocean blue. */

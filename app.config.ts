@@ -9,11 +9,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: "./assets/images/icon.png",
   scheme: "endorphix",
   userInterfaceStyle: "dark",
-  backgroundColor: "#26292B",
+  backgroundColor: "#0B0C10",
   splash: {
     image: "./assets/images/splash-icon.png",
     resizeMode: "contain",
-    backgroundColor: "#26292B",
+    backgroundColor: "#0B0C10",
   },
   ios: {
     supportsTablet: false,
@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#26292B",
+      backgroundColor: "#0B0C10",
     },
     package: "com.endorphix.app",
     permissions: [
@@ -50,9 +50,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-splash-screen",
       {
         image: "./assets/images/splash-icon.png",
-        imageWidth: 200,
+        // The wordmark is ~5.6:1, so 240 wide sits about 43 tall: present without crowding the screen.
+        imageWidth: 240,
         resizeMode: "contain",
-        backgroundColor: "#26292B",
+        backgroundColor: "#0B0C10",
       },
     ],
   ],
