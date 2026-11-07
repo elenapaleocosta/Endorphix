@@ -1,46 +1,86 @@
-import { useState, type ReactNode } from "react";
-import { Text, View } from "react-native";
+import { type ReactNode } from "react";
+import { Image, Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { MotiView } from "moti";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Colors, MAX_RADIUS_KM, REALM_BY_ID, SPARK_MIN_RATING } from "@/constants";
-import { formatDistance, sportLabel } from "@/utils";
+import { formatDistance } from "@/utils";
 import { haptics } from "@/lib/haptics";
-import { openDirections } from "@/lib/maps";
 import { useSparkFacilities } from "@/hooks/useFacilities";
 import { useLocationStore } from "@/store/location.store";
-import { Button, Card, EmptyState, ErrorState, Eyebrow, PageHeader, Screen, Tag } from "@/components/ui";
-import type { Facility } from "@/types";
+import { useBucketStore, type BucketItem } from "@/store/bucket.store";
+import { SwipeDeck } from "@/components/SwipeDeck";
+import {
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  IconButton,
+  PageHeader,
+  Screen,
+  SectionHeader,
+  Skeleton,
+} from "@/components/ui";
 
+/**
+ * The Spark: top-rated venues nearby as a deck. Swipe right to save one to the bucket list,
+ * left to pass. Passes reset each launch; the bucket list is kept.
+ */
 export default function SparkScreen() {
   const userLocation = useLocationStore((s) => s.userLocation);
-  const { data: venues, isPending, isError, isFetching, refetch } = useSparkFacilities(userLocation);
-  const [index, setIndex] = useState<number | null>(null);
+  const { data: venues = [], isPending, isError, refetch } = useSparkFacilities(userLocation);
+  const items = useBucketStore((s) => s.items);
+  const skipped = useBucketStore((s) => s.skipped);
+  const save = useBucketStore((s) => s.save);
+  const skip = useBucketStore((s) => s.skip);
+  const reshuffle = useBucketStore((s) => s.reshuffle);
 
-  const venue = index !== null && venues?.length ? venues[index % venues.length] : undefined;
+  const saved = new Set(items.map((item) => item.id));
+  const queue = venues.filter((venue) => !saved.has(venue.id) && !skipped.includes(venue.id));
 
-  const roll = async () => {
-    haptics.impact();
-    if (!venues?.length) return;
-    const next = index === null ? 0 : index + 1;
-    // Reshuffle once every venue has been shown.
-    if (next > 0 && next % venues.length === 0) await refetch();
-    setIndex(next);
-  };
-
-  let body: ReactNode = null;
+  let deck: ReactNode;
   if (isError) {
-    body = <ErrorState title="Couldn't reach the Spark engine" onRetry={() => refetch()} />;
-  } else if (venues && !venues.length) {
-    body = (
+    deck = <ErrorState title="Couldn't reach the Spark engine" onRetry={() => refetch()} />;
+  } else if (isPending && !venues.length) {
+    deck = <Skeleton className="h-[440px] w-full rounded-3xl" />;
+  } else if (!venues.length) {
+    deck = (
       <EmptyState
         icon="flash-outline"
         title={`No ${SPARK_MIN_RATING}★ venues within ${MAX_RADIUS_KM} km`}
         message="Try Discover to browse every venue nearby."
       />
     );
-  } else if (venue) {
-    body = <SparkResult venue={venue} />;
+  } else if (!queue.length) {
+    deck = (
+      <Card>
+        <View className="items-center py-6">
+          <Ionicons name="checkmark-done-outline" size={28} color={Colors.highlightInk} />
+          <Text className="mt-3 text-center font-display-bold text-xl text-fg">You've seen everyone nearby</Text>
+          <Text className="mt-1 text-center text-sm leading-5 text-fg-muted">
+            {items.length
+              ? `${items.length} saved to your bucket list. Pick one below and go.`
+              : "Nothing caught your eye this round."}
+          </Text>
+          {skipped.length ? (
+            <Button
+              label={`Show the ${skipped.length} skipped again`}
+              icon="refresh"
+              variant="secondary"
+              size="sm"
+              onPress={reshuffle}
+              className="mt-4"
+            />
+          ) : null}
+        </View>
+      </Card>
+    );
+  } else {
+    deck = (
+      <SwipeDeck
+        venues={queue}
+        onSwipe={(venue, direction) => (direction === "right" ? save(venue) : skip(venue.id))}
+      />
+    );
   }
 
   return (
@@ -49,89 +89,73 @@ export default function SparkScreen() {
         eyebrow="Spontaneous action"
         eyebrowTone="highlight"
         title="The Spark"
-        subtitle={`One tap surfaces a top-rated venue (${SPARK_MIN_RATING}★ and up) within ${MAX_RADIUS_KM} km. Stop deciding, start moving.`}
+        subtitle={`Top-rated venues within ${MAX_RADIUS_KM} km. Swipe right to save, left to pass.`}
       />
 
-      <Button
-        variant="spark"
-        icon="flash"
-        label={venue ? "Roll again" : "Surprise me"}
-        loading={isPending || isFetching}
-        disabled={isError || !venues?.length}
-        onPress={roll}
-        size="lg"
-      />
+      {deck}
 
-      <View className="mt-6">{body}</View>
+      <View className="mt-10">
+        <SectionHeader title={items.length ? `Bucket list · ${items.length}` : "Bucket list"} />
+        {items.length ? (
+          <Card flush>
+            {items.map((item, i) => (
+              <BucketRow key={item.id} item={item} last={i === items.length - 1} />
+            ))}
+          </Card>
+        ) : (
+          <View className="rounded-2xl border border-dashed border-line px-5 py-6">
+            <Text className="text-center text-sm leading-5 text-fg-muted">
+              Swipe right on a venue to keep it here for when you're ready to move.
+            </Text>
+          </View>
+        )}
+      </View>
     </Screen>
   );
 }
 
-function SparkResult({ venue }: { venue: Facility }) {
+function BucketRow({ item, last }: { item: BucketItem; last: boolean }) {
   const router = useRouter();
-  const realm = REALM_BY_ID[venue.macro_realm ?? "land"];
-  const distance = formatDistance(venue.distance_meters);
-  const recovery = venue.expand_activities?.[0];
+  const remove = useBucketStore((s) => s.remove);
+  const realm = REALM_BY_ID[item.macro_realm ?? "land"];
+  const distance = formatDistance(item.distance_meters);
+  const image = item.images[0];
 
   return (
-    <MotiView
-      key={venue.id}
-      from={{ opacity: 0, translateY: 8 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: "timing", duration: 250 }}
-    >
-      <Card accent>
-        <View className="flex-row items-center justify-between gap-2">
-          <Tag label="Spark pick" tone="highlight" />
-          <View className="flex-row items-center gap-1">
-            <Ionicons name="star" size={14} color={Colors.accent} />
-            <Text className="text-base font-bold text-fg">{venue.rating.toFixed(1)}</Text>
+    <View className={`flex-row items-center gap-3 px-4 py-3 ${last ? "" : "border-b border-line"}`}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name}, open venue`}
+        onPress={() => {
+          haptics.tap();
+          router.push(`/facility/${item.id}`);
+        }}
+        className="min-w-0 flex-1 flex-row items-center gap-3 active:opacity-80"
+      >
+        {image ? (
+          <Image source={{ uri: image }} resizeMode="cover" className="h-12 w-12 shrink-0 rounded-xl bg-line" />
+        ) : (
+          <View className="h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-raised">
+            <Ionicons name="image-outline" size={18} color={Colors.fgMuted} />
           </View>
-        </View>
-
-        <Text accessibilityRole="header" className="mt-3 text-2xl font-display text-fg">
-          {venue.name}
-        </Text>
-        {venue.description ? (
-          <Text className="mt-2 text-base leading-6 text-fg-muted">{venue.description}</Text>
-        ) : null}
-
-        <View className="mt-3 flex-row flex-wrap gap-2">
-          <Tag label={realm.label} dotColor={realm.accent} />
-          {venue.primary_sports.map((sport) => (
-            <Tag key={sport} label={sportLabel(sport)} />
-          ))}
-        </View>
-
-        <Text className="mt-3 text-sm text-fg-muted">
-          {[venue.address, distance ? `${distance} away` : null].filter(Boolean).join(" · ")}
-        </Text>
-
-        {recovery ? (
-          <View className="mt-4 rounded-xl border border-line bg-raised p-3">
-            <Eyebrow tone="accent">On-site recovery</Eyebrow>
-            <Text className="mt-1 text-sm font-semibold text-fg">
-              {recovery.title} · {recovery.durationMinutes} min
+        )}
+        <View className="min-w-0 flex-1">
+          <Text numberOfLines={1} className="text-base font-bold text-fg">
+            {item.name}
+          </Text>
+          <View className="mt-0.5 flex-row items-center gap-1.5">
+            <View className="h-2 w-2 rounded-full" style={{ backgroundColor: realm.accent }} />
+            <Text numberOfLines={1} className="flex-1 text-sm text-fg-muted">
+              {[realm.label, distance, `★ ${item.rating.toFixed(1)}`].filter(Boolean).join(" · ")}
             </Text>
           </View>
-        ) : null}
-
-        <View className="mt-5 gap-3 sm:flex-row">
-          <Button
-            label="View & book"
-            icon="calendar-outline"
-            onPress={() => router.push(`/facility/${venue.id}`)}
-            className="sm:flex-1"
-          />
-          <Button
-            label="Directions"
-            icon="navigate-outline"
-            variant="secondary"
-            onPress={() => openDirections(venue)}
-            className="sm:flex-1"
-          />
         </View>
-      </Card>
-    </MotiView>
+      </Pressable>
+      <IconButton
+        icon="close"
+        accessibilityLabel={`Remove ${item.name} from bucket list`}
+        onPress={() => remove(item.id)}
+      />
+    </View>
   );
 }
