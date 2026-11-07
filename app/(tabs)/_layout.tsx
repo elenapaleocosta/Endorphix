@@ -1,6 +1,8 @@
 import { type ComponentProps } from "react";
-import { ActivityIndicator, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Easing, View, useWindowDimensions } from "react-native";
 import { Tabs } from "expo-router";
+import type { BottomTabNavigationOptions } from "@react-navigation/bottom-tabs";
+import { useReducedMotion } from "react-native-reanimated";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,11 +26,33 @@ const travelIcon = ({ color, focused }: { color: string; focused: boolean }) => 
   <MaterialCommunityIcons name={focused ? "bag-suitcase" : "bag-suitcase-outline"} size={22} color={color} />
 );
 
+/**
+ * Tab change: a quiet fade through the canvas, never a slide (tabs are peers, not a hierarchy).
+ * Progress runs 0 → ±1 for the outgoing tab and ±1 → 0 for the incoming one (the sign depends on
+ * which side the tab sits), so the curve is symmetric: the outgoing tab clears in the first half,
+ * the incoming one fades up in the second with a 4px settle. The two never double-expose.
+ * Strong ease-out, kept short because tabs switch many times a session.
+ */
+const TAB_TRANSITION_SPEC: BottomTabNavigationOptions["transitionSpec"] = {
+  animation: "timing",
+  config: { duration: 220, easing: Easing.bezier(0.23, 1, 0.32, 1) },
+};
+
+const tabSceneStyle: BottomTabNavigationOptions["sceneStyleInterpolator"] = ({ current }) => ({
+  sceneStyle: {
+    opacity: current.progress.interpolate({ inputRange: [-1, -0.5, 0, 0.5, 1], outputRange: [0, 0, 1, 0, 0] }),
+    transform: [
+      { translateY: current.progress.interpolate({ inputRange: [-1, 0, 1], outputRange: [4, 0, 4] }) },
+    ],
+  },
+});
+
 export default function TabsLayout() {
   useDeviceLocation();
   const hydrated = useAuthStore((s) => s.hydrated);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const reduceMotion = useReducedMotion();
 
   if (!hydrated) {
     return (
@@ -47,6 +71,11 @@ export default function TabsLayout() {
       screenListeners={{ tabPress: () => haptics.selection() }}
       screenOptions={{
         headerShown: false,
+        // Reduced motion: switch instantly.
+        ...(reduceMotion
+          ? { animation: "none" as const }
+          : { transitionSpec: TAB_TRANSITION_SPEC, sceneStyleInterpolator: tabSceneStyle }),
+        sceneStyle: { backgroundColor: Colors.canvas },
         tabBarActiveTintColor: Colors.accent,
         tabBarInactiveTintColor: Colors.fgMuted,
         // An explicit line height so the label always gets a full line and is never clipped.

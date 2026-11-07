@@ -1,8 +1,9 @@
 import { type ComponentProps } from "react";
-import { ActivityIndicator, Pressable, Text } from "react-native";
+import { ActivityIndicator, Text } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Colors } from "@/constants";
 import { haptics } from "@/lib/haptics";
+import { PressableScale } from "./PressableScale";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 type Variant = "primary" | "spark" | "secondary" | "danger" | "link";
@@ -50,6 +51,8 @@ interface ButtonProps {
   disabled?: boolean;
   accessibilityHint?: string;
   className?: string;
+  /** Fire the light tap pulse. Turn off when onPress fires its own haptic, so one action = one pulse. */
+  haptic?: boolean;
 }
 
 export function Button({
@@ -62,6 +65,7 @@ export function Button({
   disabled = false,
   accessibilityHint,
   className = "",
+  haptic = true,
 }: ButtonProps) {
   const inactive = disabled || loading;
   // Disabled buttons get a solid muted look rather than reduced opacity, which would let the backdrop show through.
@@ -72,17 +76,17 @@ export function Button({
       : { lg: "min-h-14 px-6 rounded-2xl", md: "min-h-12 px-5 rounded-xl", sm: "min-h-10 px-4 rounded-xl" }[size];
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: inactive, busy: loading }}
       disabled={inactive}
       onPress={() => {
-        haptics.tap();
+        if (haptic) haptics.tap();
         onPress();
       }}
-      className={`flex-row items-center justify-center gap-2 active:scale-[0.98] ${sizing} ${
+      className={`flex-row items-center justify-center gap-2 ${sizing} ${
         muted ? (variant === "link" ? "" : "border border-line bg-raised") : CONTAINER[variant]
       } ${className}`}
     >
@@ -99,7 +103,7 @@ export function Button({
       >
         {label}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -108,21 +112,23 @@ interface IconButtonProps {
   accessibilityLabel: string;
   onPress: () => void;
   className?: string;
+  /** Fire the light tap pulse. Turn off when onPress fires its own haptic. */
+  haptic?: boolean;
 }
 
-export function IconButton({ icon, accessibilityLabel, onPress, className = "" }: IconButtonProps) {
+export function IconButton({ icon, accessibilityLabel, onPress, className = "", haptic = true }: IconButtonProps) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       hitSlop={4}
       onPress={() => {
-        haptics.tap();
+        if (haptic) haptics.tap();
         onPress();
       }}
-      className={`h-10 w-10 items-center justify-center rounded-full border border-line bg-raised active:scale-[0.98] ${className}`}
+      className={`h-10 w-10 items-center justify-center rounded-full border border-line bg-raised ${className}`}
     >
       <Ionicons name={icon} size={20} color={Colors.fg} />
-    </Pressable>
+    </PressableScale>
   );
 }

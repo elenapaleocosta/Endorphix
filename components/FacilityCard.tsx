@@ -1,9 +1,9 @@
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Colors, REALM_BY_ID } from "@/constants";
 import { formatDistance } from "@/utils";
 import { haptics } from "@/lib/haptics";
-import { Skeleton, Tag } from "@/components/ui";
+import { PressableScale, Skeleton, Tag } from "@/components/ui";
 import type { Facility } from "@/types";
 
 interface FacilityCardProps {
@@ -27,7 +27,7 @@ export function FacilityCard({ facility, onPress }: FacilityCardProps) {
     .join(", ");
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={a11yLabel}
       accessibilityHint="Opens venue details"
@@ -35,7 +35,7 @@ export function FacilityCard({ facility, onPress }: FacilityCardProps) {
         haptics.tap();
         onPress();
       }}
-      className="overflow-hidden rounded-2xl border border-line bg-surface active:scale-[0.98]"
+      className="overflow-hidden rounded-2xl border border-line bg-surface"
     >
       {image ? (
         <Image source={{ uri: image }} resizeMode="cover" className="h-36 w-full bg-line" />
@@ -67,7 +67,7 @@ export function FacilityCard({ facility, onPress }: FacilityCardProps) {
           {distance ? <Text className="shrink-0 text-sm font-semibold text-fg">{distance}</Text> : null}
         </View>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 

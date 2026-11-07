@@ -81,7 +81,7 @@ export default function IntroScreen() {
 
         {/* The way in shows almost at once; only the artwork above takes its time. */}
         <Reveal delay={300}>
-          <Button label="Begin" size="lg" onPress={() => enter("/(tabs)/discover")} />
+          <Button label="Begin" size="lg" haptic={false} onPress={() => enter("/(tabs)/discover")} />
           <Pressable
             accessibilityRole="link"
             onPress={() => enter("/(auth)/sign-in")}

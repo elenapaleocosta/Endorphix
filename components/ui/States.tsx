@@ -1,4 +1,4 @@
-import { type ComponentProps } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { MotiView } from "moti";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -7,23 +7,35 @@ import { Button } from "./Button";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
+const SKELETON_DELAY_MS = 300;
+
 /**
  * Pulsing placeholder block. Size it with className (e.g. "h-40 w-full").
  * Pulses between two solid tones rather than fading opacity, so the backdrop never shows through.
  */
 export function Skeleton({ className = "", square = false }: { className?: string; square?: boolean }) {
+  // Hold the space but stay invisible for the first 300ms: loads faster than that never flash a placeholder.
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShown(true), SKELETON_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       className={`overflow-hidden bg-raised ${square ? "" : "rounded-lg"} ${className}`}
+      style={{ opacity: shown ? 1 : 0 }}
     >
-      <MotiView
-        style={StyleSheet.absoluteFill}
-        from={{ backgroundColor: Colors.surface }}
-        animate={{ backgroundColor: Colors.raised }}
-        transition={{ type: "timing", duration: 800, loop: true }}
-      />
+      {shown ? (
+        <MotiView
+          style={StyleSheet.absoluteFill}
+          from={{ backgroundColor: Colors.surface }}
+          animate={{ backgroundColor: Colors.raised }}
+          transition={{ type: "timing", duration: 800, loop: true }}
+        />
+      ) : null}
     </View>
   );
 }

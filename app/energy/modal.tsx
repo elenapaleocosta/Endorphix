@@ -100,7 +100,7 @@ export default function EnergyModal() {
 
       <Card className="gap-5">
         <View className="flex-row items-center justify-between gap-3">
-          <IconButton icon="remove" accessibilityLabel="Decrease by 1" onPress={() => adjust(score - 1)} />
+          <IconButton icon="remove" accessibilityLabel="Decrease by 1" haptic={false} onPress={() => adjust(score - 1)} />
           <View
             accessible
             accessibilityRole="adjustable"
@@ -116,7 +116,7 @@ export default function EnergyModal() {
               <Text className="text-sm font-bold text-fg">{band.label}</Text>
             </View>
           </View>
-          <IconButton icon="add" accessibilityLabel="Increase by 1" onPress={() => adjust(score + 1)} />
+          <IconButton icon="add" accessibilityLabel="Increase by 1" haptic={false} onPress={() => adjust(score + 1)} />
         </View>
 
         <View className="flex-row gap-1">

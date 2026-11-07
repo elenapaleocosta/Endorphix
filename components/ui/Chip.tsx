@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 import { Colors } from "@/constants";
 import { haptics } from "@/lib/haptics";
+import { PressableScale } from "./PressableScale";
 
 interface ChipProps {
   label: string;
@@ -16,7 +17,7 @@ interface ChipProps {
 
 export function Chip({ label, selected, onPress, sublabel, dotColor, grow = false, accessibilityLabel }: ChipProps) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected }}
@@ -24,7 +25,7 @@ export function Chip({ label, selected, onPress, sublabel, dotColor, grow = fals
         haptics.selection();
         onPress();
       }}
-      className={`min-h-10 justify-center rounded-xl border px-3.5 py-2 active:scale-[0.98] ${
+      className={`min-h-10 justify-center rounded-xl border px-3.5 py-2 ${
         selected ? "border-accent bg-accent" : "border-line bg-raised"
       } ${grow ? "flex-1 items-center" : ""}`}
     >
@@ -42,7 +43,7 @@ export function Chip({ label, selected, onPress, sublabel, dotColor, grow = fals
           {sublabel}
         </Text>
       ) : null}
-    </Pressable>
+    </PressableScale>
   );
 }
 

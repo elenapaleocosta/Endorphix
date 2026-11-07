@@ -296,7 +296,7 @@ function BookingPanel({ facility }: { facility: Facility }) {
       {!anyOpen ? (
         <Text className="text-sm text-fg-muted">Today's slots have all started. New slots open tomorrow.</Text>
       ) : signedIn ? (
-        <Button label="Reserve slot" icon="calendar-outline" onPress={reserve} />
+        <Button label="Reserve slot" icon="calendar-outline" haptic={false} onPress={reserve} />
       ) : (
         <View className="gap-2">
           <Button

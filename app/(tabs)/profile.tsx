@@ -12,7 +12,7 @@ import { useBookingStore } from "@/store/booking.store";
 import { useOnboardingStore } from "@/store/onboarding.store";
 import { EnergyWaveChart } from "@/components/EnergyWaveChart";
 import { SportBreakdown } from "@/components/SportBreakdown";
-import { Button, Card, Eyebrow, ListRow, PageHeader, Screen, SectionHeader } from "@/components/ui";
+import { Button, PressableScale, Card, Eyebrow, ListRow, PageHeader, Screen, SectionHeader } from "@/components/ui";
 import type { Booking, MacroRealm, User } from "@/types";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
@@ -128,7 +128,7 @@ export default function PassportScreen() {
           <SectionHeader title="Awaiting your rating" />
           <View className="gap-2">
             {pending.map((booking) => (
-              <Pressable
+              <PressableScale
                 key={booking.id}
                 accessibilityRole="button"
                 accessibilityLabel={`Rate ${booking.activity_name} at ${booking.facility_name}`}
@@ -136,7 +136,7 @@ export default function PassportScreen() {
                   haptics.tap();
                   openLogger(booking.id);
                 }}
-                className="flex-row items-center gap-3 rounded-2xl border border-highlight-edge bg-highlight-soft p-4 active:scale-[0.98]"
+                className="flex-row items-center gap-3 rounded-2xl border border-highlight-edge bg-highlight-soft p-4"
               >
                 <View className="min-w-0 flex-1">
                   <Text numberOfLines={1} className="text-base font-bold text-fg">
@@ -148,7 +148,7 @@ export default function PassportScreen() {
                 </View>
                 <Text className="text-sm font-bold text-highlight-ink">Rate</Text>
                 <Ionicons name="chevron-forward" size={18} color={Colors.highlightInk} />
-              </Pressable>
+              </PressableScale>
             ))}
           </View>
         </View>

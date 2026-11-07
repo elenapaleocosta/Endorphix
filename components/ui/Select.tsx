@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Colors } from "@/constants";
 import { haptics } from "@/lib/haptics";
+import { PressableScale } from "./PressableScale";
 
 interface SelectOption<T extends string> {
   value: T;
@@ -42,7 +43,7 @@ export function Select<T extends string>({ options, value, onChange, placeholder
 
   return (
     <View>
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         accessibilityLabel={`${accessibilityLabel}: ${current?.label ?? placeholder}`}
         accessibilityState={{ expanded: open }}
@@ -50,13 +51,13 @@ export function Select<T extends string>({ options, value, onChange, placeholder
           haptics.tap();
           setOpen(!open);
         }}
-        className="min-h-14 flex-row items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 active:scale-[0.98]"
+        className="min-h-14 flex-row items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4"
       >
         <Text numberOfLines={1} className={`min-w-0 flex-1 text-base font-bold ${current ? "text-fg" : "text-fg-muted"}`}>
           {current?.label ?? placeholder}
         </Text>
         <Ionicons name={open ? "chevron-up" : "chevron-down"} size={18} color={Colors.fgMuted} />
-      </Pressable>
+      </PressableScale>
 
       {open ? (
         <View className="mt-2 overflow-hidden rounded-2xl border border-line bg-surface">
