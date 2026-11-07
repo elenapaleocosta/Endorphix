@@ -13,9 +13,6 @@ export const ENERGY_SCALE_MAX = 100;
 export const FALLBACK_LOCATION: GeoPoint = { latitude: 37.9838, longitude: 23.7275 };
 export const FALLBACK_LOCATION_LABEL = "Athens";
 
-export const BRAND_PHILOSOPHY =
-  "The luxury of movement is a gift given to many that shall not be wasted. Running, jumping, and channeling energy throughout the body is the most effective way of getting to know yourself.";
-
 export interface MacroRealmDefinition {
   id: MacroRealm;
   label: string;

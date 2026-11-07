@@ -31,10 +31,7 @@ module.exports = {
           faint: palette.fgFaint,
         },
         accent: palette.accent,
-        tint: {
-          DEFAULT: palette.tint,
-          cool: palette.tintCool,
-        },
+        tint: palette.tint,
         highlight: {
           DEFAULT: palette.highlight,
           ink: palette.highlightInk,

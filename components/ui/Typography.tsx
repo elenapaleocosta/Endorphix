@@ -2,13 +2,12 @@ import { type ReactNode } from "react";
 import { Text, View } from "react-native";
 import { IconButton } from "./Button";
 
-type EyebrowTone = "muted" | "accent" | "highlight" | "tint";
+type EyebrowTone = "muted" | "accent" | "highlight";
 
 const EYEBROW_TONE: Record<EyebrowTone, string> = {
   muted: "text-fg-muted",
   accent: "text-accent",
   highlight: "text-highlight-ink",
-  tint: "text-tint",
 };
 
 export function Eyebrow({ children, tone = "muted" }: { children: ReactNode; tone?: EyebrowTone }) {

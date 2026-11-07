@@ -2,8 +2,8 @@
  * Single source of truth for brand colours.
  * Consumed by tailwind.config.js (class names) and constants/index.ts (raw values
  * for SVG, Switch, ActivityIndicator and placeholder colours). The splash and icon
- * background in app.config.ts and the web fallbacks in global.css repeat `canvas` and
- * `tintCool`: keep them in step when these change.
+ * background in app.config.ts and the web fallbacks in global.css repeat `canvas`, and
+ * global.css uses `accent` for the keyboard focus ring: keep them in step when these change.
  *
  * Midnight Ice: the brief's near-black (#0A0A0F) with a blue cast, lit by a pale ice accent.
  * Deep, matte and nocturnal. Source colours are marked; every other tone is generated from
@@ -27,10 +27,8 @@ const palette = {
   fgFaint: "#8D929D",
   /** Source #C7D0DB Ice: primary actions, links and selected states (labels sit in canvas, 12.5:1). */
   accent: "#C7D0DB",
-  /** Ice muted 35% toward the surface: the mid energy band and decorative marks. */
+  /** Ice muted 35% toward the surface: the mid energy band. */
   tint: "#888F98",
-  /** Ice: the keyboard focus ring. */
-  tintCool: "#C7D0DB",
   /** Source #8EA3BA Glacier: the endorphin peak, highlighted cards and tags. */
   highlight: "#8EA3BA",
   /** Glacier as the Spark button fill; its midnight label is 7.5:1. */

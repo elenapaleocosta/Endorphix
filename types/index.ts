@@ -25,17 +25,6 @@ export interface User {
   updated_at: string;
 }
 
-export interface UserProfile extends User {
-  total_energy_logs: number;
-  average_energy_score: number;
-  highest_energy_score?: number;
-  macro_realm_distribution?: {
-    water: number;
-    land: number;
-    mountain: number;
-  };
-}
-
 // ─── Macro Sport Realms (Water, Land, Mountain) ───────────────────────────────
 
 export type MacroRealm = "water" | "land" | "mountain";
@@ -167,20 +156,4 @@ export interface EnergyWaveDataPoint {
   score: number;
   activity_type: ActivityType;
   activity_title?: string;
-}
-
-// ─── Discover Search Params ───────────────────────────────────────────────────
-
-export interface SportFirstParams {
-  realm?: MacroRealm;
-  sport?: SportCategory;
-  radius_km: number;
-  user_location: GeoPoint;
-}
-
-export interface DestinationFirstParams {
-  destination: string;
-  days: number;
-  radius_km: number;
-  preferredRealms: MacroRealm[];
 }
