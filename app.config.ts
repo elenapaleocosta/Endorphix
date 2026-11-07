@@ -56,4 +56,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   experiments: {
     typedRoutes: true,
   },
+  extra: {
+    eas: {
+      // The "Endorphix" project on expo.dev, which EAS builds and updates attach to.
+      projectId: "c254dd26-7fa1-4151-9e75-350f9f1fd276",
+    },
+  },
 });
