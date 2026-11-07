@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { MAX_RADIUS_KM, SPARK_MIN_RATING } from "@/constants";
+import { geocodePlace, PlaceNotFoundError, type Place } from "@/lib/geocode";
 import {
   getFilteredCuratedFacilities,
   getKnownFacility,
   queryOsmOverpassFacilities,
+  queryOsmTripFacilities,
   rememberFacilities,
 } from "@/lib/geo-services";
 import type { Facility, GeoPoint, MacroRealm, SportCategory } from "@/types";
@@ -138,6 +140,68 @@ export function useSparkFacilities(location: GeoPoint | null) {
     enabled: location !== null,
     staleTime: 2 * 60_000,
     retry: false,
+  });
+}
+
+export interface TripVenues {
+  place: Place;
+  /** Venues near the destination, nearest first. */
+  venues: Facility[];
+  /**
+   * True when no real venues answered (OpenStreetMap down, or nothing mapped) and the plan uses the
+   * curated sample venues placed around the destination instead. The UI must label these as samples.
+   */
+  sample: boolean;
+}
+
+/**
+ * Venues within range of a typed destination, nearest first. Uses the venue database when it's
+ * configured, else one combined OpenStreetMap query. If neither finds anything, falls back to the
+ * curated sample venues placed around the destination, flagged `sample` so the UI can say so.
+ */
+async function fetchTripVenues(destination: string): Promise<TripVenues> {
+  const real = await fetchRealTripVenues(destination);
+  if (real.venues.length) return { ...real, sample: false };
+  return {
+    place: real.place,
+    venues: getFilteredCuratedFacilities(real.place.point, MAX_RADIUS_KM * 1000),
+    sample: true,
+  };
+}
+
+async function fetchRealTripVenues(destination: string): Promise<Omit<TripVenues, "sample">> {
+  const place = await geocodePlace(destination);
+  const radiusMeters = MAX_RADIUS_KM * 1000;
+
+  if (isSupabaseConfigured) {
+    const rows = await tryRpc(() =>
+      supabase.rpc("facilities_within_radius", {
+        lat: place.point.latitude,
+        lng: place.point.longitude,
+        radius_meters: radiusMeters,
+        sport_filter: null,
+      }),
+    );
+    if (rows) {
+      const venues = rememberFacilities(mapRpcRows(rows, place.point)).sort(
+        (a, b) => (a.distance_meters ?? 0) - (b.distance_meters ?? 0),
+      );
+      return { place, venues };
+    }
+  }
+
+  return { place, venues: await queryOsmTripFacilities(place.point, radiusMeters) };
+}
+
+/** Runs only for a submitted destination (never per keystroke), cached for 10 minutes per place. */
+export function useTripVenues(destination: string | null) {
+  return useQuery({
+    queryKey: [...facilityKeys.all, "trip", destination?.trim().toLowerCase() ?? ""],
+    queryFn: () => fetchTripVenues(destination!),
+    enabled: Boolean(destination?.trim()),
+    // A sample plan is stale at once, so the next visit tries the real venues again.
+    staleTime: (q) => (q.state.data?.sample ? 0 : 10 * 60_000),
+    retry: (count, error) => !(error instanceof PlaceNotFoundError) && count < 1,
   });
 }
 

@@ -169,34 +169,6 @@ export interface EnergyWaveDataPoint {
   activity_title?: string;
 }
 
-// ─── Destination Tour Action Packages ────────────────────────────────────────
-
-export interface TourPackageActivity {
-  timeOfDay: "Morning" | "Afternoon" | "Sunset / Evening";
-  title: string;
-  sport: SportCategory;
-  facility: Facility;
-  intensity: "High" | "Extreme" | "Recovery";
-  description: string;
-}
-
-export interface TourDay {
-  day: number;
-  date: string;
-  theme: string;
-  activities: TourPackageActivity[];
-}
-
-export interface TourPlan {
-  id: string;
-  destination: string;
-  days: number;
-  radiusKm: number;
-  realms: MacroRealm[];
-  tour_days: TourDay[];
-  created_at: string;
-}
-
 // ─── Discover Search Params ───────────────────────────────────────────────────
 
 export interface SportFirstParams {

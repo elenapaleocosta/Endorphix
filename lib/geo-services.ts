@@ -2,8 +2,7 @@
 // Type-safe external data binding with robust fallback handling.
 
 import { FALLBACK_LOCATION } from "@/constants";
-import { sportLabel } from "@/utils";
-import type { Facility, GeoPoint, SportCategory, MacroRealm, TourPlan } from "@/types";
+import type { Facility, GeoPoint, SportCategory, MacroRealm } from "@/types";
 
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
@@ -461,15 +460,15 @@ export async function queryOsmOverpassFacilities(
   }
 
   // 2. Build focused, lightweight Overpass QL query
-  let tagFilters = `node["leisure"="sports_centre"](around:${radius},${lat},${lng});node["sport"="tennis"](around:${radius},${lat},${lng});`;
+  let tagFilters = `nwr["leisure"="sports_centre"](around:${radius},${lat},${lng});nwr["sport"="tennis"](around:${radius},${lat},${lng});`;
   if (sportFilter === "tennis") {
-    tagFilters = `node["sport"="tennis"](around:${radius},${lat},${lng});`;
+    tagFilters = `nwr["sport"="tennis"](around:${radius},${lat},${lng});`;
   } else if (sportFilter === "swimming" || sportFilter === "water") {
-    tagFilters = `node["sport"="swimming"](around:${radius},${lat},${lng});`;
+    tagFilters = `nwr["sport"="swimming"](around:${radius},${lat},${lng});`;
   } else if (sportFilter === "climbing" || sportFilter === "mountain") {
-    tagFilters = `node["sport"="climbing"](around:${radius},${lat},${lng});`;
+    tagFilters = `nwr["sport"="climbing"](around:${radius},${lat},${lng});`;
   } else if (sportFilter === "cycling" || sportFilter === "running") {
-    tagFilters = `node["sport"="running"](around:${radius},${lat},${lng});node["leisure"="sports_centre"](around:${radius},${lat},${lng});`;
+    tagFilters = `nwr["sport"="running"](around:${radius},${lat},${lng});nwr["leisure"="sports_centre"](around:${radius},${lat},${lng});`;
   }
 
   const query = `[out:json][timeout:5];(${tagFilters});out center 15;`;
@@ -485,10 +484,24 @@ export async function queryOsmOverpassFacilities(
     return getFilteredCuratedFacilities(origin, radiusMeters, sportFilter);
   }
 
-  // Map Overpass nodes to Facility format
-  const parsedFacilities: Facility[] = elements
+  const parsedFacilities = parseOverpassElements(elements, origin);
+
+  // Combine with curated facilities
+  const combined = [...parsedFacilities, ...curatedAround(origin)];
+  const result = filterAndSortFacilities(combined, radiusMeters, sportFilter);
+
+  // Save to cache
+  overpassCache.set(cacheKey, { timestamp: Date.now(), facilities: result });
+  return result;
+}
+
+/** Maps raw Overpass elements (nodes, or ways/relations via their center) to Facility records. */
+function parseOverpassElements(elements: any[], origin: GeoPoint, limit = 15): Facility[] {
+  const lat = origin.latitude;
+  const lng = origin.longitude;
+  return elements
     .filter((el) => el.tags && (el.tags.name || el.tags["name:en"]))
-    .slice(0, 15)
+    .slice(0, limit)
     .map((el, idx) => {
       const itemLat = el.lat || el.center?.lat || lat;
       const itemLng = el.lon || el.center?.lon || lng;
@@ -496,13 +509,13 @@ export async function queryOsmOverpassFacilities(
         latitude: itemLat,
         longitude: itemLng,
       });
-
+  
       const name = el.tags.name || el.tags["name:en"] || `Athletic Ground ${idx + 1}`;
       const sportTag = (el.tags.sport || el.tags.leisure || "").toLowerCase();
-
+  
       let macro: MacroRealm = "land";
       let sports: SportCategory[] = ["gym", "running"];
-
+  
       if (sportTag.includes("swim") || sportTag.includes("water") || sportTag.includes("row")) {
         macro = "water";
         sports = ["swimming"];
@@ -513,16 +526,17 @@ export async function queryOsmOverpassFacilities(
         macro = "land";
         sports = ["tennis"];
       }
-
+  
       const address = [
         [el.tags["addr:street"], el.tags["addr:housenumber"]].filter(Boolean).join(" "),
         el.tags["addr:city"],
       ]
         .filter(Boolean)
         .join(", ");
-
+  
       return {
-        id: `osm-${el.id ?? idx}`,
+        // Ways and relations are numbered separately from nodes, so qualify them; node ids keep their old form.
+        id: el.type && el.type !== "node" ? `osm-${el.type}-${el.id}` : `osm-${el.id ?? idx}`,
         name,
         description: el.tags.description,
         address,
@@ -543,13 +557,42 @@ export async function queryOsmOverpassFacilities(
         updated_at: new Date().toISOString(),
       };
     });
+}
 
-  // Combine with curated facilities
-  const combined = [...parsedFacilities, ...curatedAround(origin)];
-  const result = filterAndSortFacilities(combined, radiusMeters, sportFilter);
+/**
+ * Real venues around a travel destination, across all three realms, in ONE Overpass query
+ * (separate land/water/mountain queries would triple the load on the mirrors and get rate-limited).
+ * Never mixes in the curated sample venues: an empty list means nothing real answered.
+ */
+export async function queryOsmTripFacilities(origin: GeoPoint, radiusMeters: number = 50000): Promise<Facility[]> {
+  const radius = Math.min(Math.max(radiusMeters, 1000), 50000);
+  const around = `(around:${radius},${origin.latitude},${origin.longitude})`;
+  const cacheKey = `trip:${origin.latitude.toFixed(3)},${origin.longitude.toFixed(3)},${radius}`;
+  const cached = overpassCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < 1000 * 60 * 10) return cached.facilities;
 
-  // Save to cache
-  overpassCache.set(cacheKey, { timestamp: Date.now(), facilities: result });
+  const query =
+    `[out:json][timeout:5];(` +
+    `nwr["leisure"="sports_centre"]${around};` +
+    `nwr["sport"~"^(tennis|padel|swimming|climbing)$"]${around};` +
+    `);out center 40;`;
+
+  let elements: any[];
+  try {
+    elements = await fetchOverpassElements(query);
+  } catch {
+    return [];
+  }
+
+  const byId = new Map<string, Facility>();
+  for (const venue of parseOverpassElements(elements, origin, 40)) {
+    if (!byId.has(venue.id) && (venue.distance_meters ?? 0) <= radius) byId.set(venue.id, venue);
+  }
+  const result = rememberFacilities(
+    [...byId.values()].sort((a, b) => (a.distance_meters ?? 0) - (b.distance_meters ?? 0)),
+  );
+  // Only cache real answers, so a busy moment doesn't pin an empty trip for ten minutes.
+  if (result.length) overpassCache.set(cacheKey, { timestamp: Date.now(), facilities: result });
   return result;
 }
 
@@ -651,73 +694,4 @@ function filterAndSortFacilities(
   return rememberFacilities(
     Array.from(map.values()).sort((a, b) => (a.distance_meters ?? 0) - (b.distance_meters ?? 0)),
   );
-}
-
-/**
- * Generates tailored multi-day Destination Action Packages
- */
-export function generateDestinationActionPackages(
-  destination: string,
-  days: number,
-  radiusKm: number,
-  preferredRealms: MacroRealm[] = ["land", "water", "mountain"]
-): TourPlan {
-  const validDays = Math.min(Math.max(days, 1), 7);
-  const activeRealms: MacroRealm[] =
-    preferredRealms.length > 0
-      ? preferredRealms
-      : (["land", "water", "mountain"] as MacroRealm[]);
-
-  const tourDays = Array.from({ length: validDays }, (_, index) => {
-    const dayNumber = index + 1;
-    const realmForDay = activeRealms[index % activeRealms.length];
-
-    const matchingVenues = CURATED_HERITAGE_FACILITIES.filter(
-      (f) => f.macro_realm === realmForDay
-    );
-    const primaryVenue =
-      matchingVenues[index % matchingVenues.length] || CURATED_HERITAGE_FACILITIES[0];
-    const secondaryVenue =
-      CURATED_HERITAGE_FACILITIES[(index + 1) % CURATED_HERITAGE_FACILITIES.length];
-
-    let theme = "Kinetic Endurance & Clay Mastery";
-    if (realmForDay === "water") theme = "Hydrodynamic Plunge & Marine Vigor";
-    if (realmForDay === "mountain") theme = "Alpine Ridgeline & Vertical Peak";
-
-    return {
-      day: dayNumber,
-      date: `Day 0${dayNumber}`,
-      theme,
-      activities: [
-        {
-          timeOfDay: "Morning" as const,
-          title: `07:30 · ${sportLabel(primaryVenue.primary_sports[0] ?? "other")} session`,
-          sport: primaryVenue.primary_sports[0] || "tennis",
-          facility: primaryVenue,
-          intensity: "High" as const,
-          description: `High-cadence interval block at ${primaryVenue.name}. Programmed to activate central somatic nervous system early.`,
-        },
-        {
-          timeOfDay: "Afternoon" as const,
-          title: "14:00 · Recovery protocol",
-          sport: secondaryVenue.primary_sports[0] || "swimming",
-          facility: secondaryVenue,
-          intensity: "Recovery" as const,
-          description:
-            primaryVenue.expand_activities?.[0]?.description ||
-            `Thermal bath and lymphatic flushing session to lock in morning adaptation.`,
-        },
-      ],
-    };
-  });
-
-  return {
-    id: `tour-${destination.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
-    destination: destination || "Alpine Lake District",
-    days: validDays,
-    radiusKm: Math.min(radiusKm, 50),
-    realms: activeRealms,
-    tour_days: tourDays,
-    created_at: new Date().toISOString(),
-  };
 }

@@ -1,15 +1,21 @@
 import { create } from "zustand";
 import { MAX_RADIUS_KM } from "@/constants";
-import type { MacroRealm, SportCategory, TourPlan } from "@/types";
+import type { MacroRealm, SportCategory } from "@/types";
 
-/** Shared by the Discover tab (realm, sport, radius) and the Travel tab (destination, stay, plan). */
+/** The trip the Travel tab last planned: what was submitted, not what is being typed. */
+export interface TripRequest {
+  destination: string;
+  days: number;
+}
+
+/** Shared by the Discover tab (realm, sport, radius) and the Travel tab (destination, stay, trip). */
 interface DiscoverState {
   selectedRealm: MacroRealm | null;
   selectedSport: SportCategory | null;
   radiusKm: number;
   destination: string;
   tourDays: number;
-  tourPlan: TourPlan | null;
+  trip: TripRequest | null;
   /** Selecting the active realm again clears it. Changing realm always clears the sport. */
   toggleRealm: (realm: MacroRealm) => void;
   /** null clears the sport ("any sport"). */
@@ -17,7 +23,7 @@ interface DiscoverState {
   setRadiusKm: (radiusKm: number) => void;
   setDestination: (destination: string) => void;
   setTourDays: (days: number) => void;
-  setTourPlan: (plan: TourPlan | null) => void;
+  setTrip: (trip: TripRequest | null) => void;
   clearFilters: () => void;
 }
 
@@ -27,7 +33,7 @@ export const useDiscoverStore = create<DiscoverState>((set) => ({
   radiusKm: MAX_RADIUS_KM,
   destination: "",
   tourDays: 3,
-  tourPlan: null,
+  trip: null,
 
   toggleRealm: (realm) =>
     set((state) => ({ selectedRealm: state.selectedRealm === realm ? null : realm, selectedSport: null })),
@@ -35,6 +41,6 @@ export const useDiscoverStore = create<DiscoverState>((set) => ({
   setRadiusKm: (radiusKm) => set({ radiusKm }),
   setDestination: (destination) => set({ destination }),
   setTourDays: (tourDays) => set({ tourDays }),
-  setTourPlan: (tourPlan) => set({ tourPlan }),
+  setTrip: (trip) => set({ trip }),
   clearFilters: () => set({ selectedRealm: null, selectedSport: null, radiusKm: MAX_RADIUS_KM }),
 }));
