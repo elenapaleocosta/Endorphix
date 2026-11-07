@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import { MAX_RADIUS_KM } from "@/constants";
@@ -8,14 +8,14 @@ import { haptics } from "@/lib/haptics";
 import { returnAfterAuth } from "@/lib/navigation";
 import { compactErrors, emailError, errorMessage, requiredError } from "@/lib/validation";
 import { DEMO_ATHLETE, useAuthStore } from "@/store/auth.store";
-import { Button, Card, PageHeader, Screen, TextField } from "@/components/ui";
+import { Button, Card, PageHeader, Screen, TextField, type TextFieldRef } from "@/components/ui";
 import type { User } from "@/types";
 
 export default function SignInScreen() {
   const router = useRouter();
   const { next } = useLocalSearchParams<{ next?: string }>();
   const setUser = useAuthStore((s) => s.setUser);
-  const passwordRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextFieldRef>(null);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

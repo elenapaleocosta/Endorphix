@@ -1,16 +1,16 @@
 /**
  * The Spark deck: swipe a venue right to save it to the bucket list, left to skip it.
- * Built to the animate-expo bar on Reanimated 3: the card tracks the finger 1:1 on the UI thread,
+ * Built to the animate-expo bar on Reanimated 4 and Gesture Handler 3: the card tracks the finger 1:1 on the UI thread,
  * a release commits on distance OR velocity (a flick is enough), the fly-out carries the finger's
  * velocity, an undecided drag springs back, and there is one haptic per decision.
  */
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { Image, Text, View, useWindowDimensions } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
+import { scheduleOnRN } from "react-native-worklets";
 import Animated, {
   Extrapolation,
   interpolate,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -134,7 +134,7 @@ const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard
       target,
       { velocity: velocityX, duration: 350, dampingRatio: 1, overshootClamping: true },
       (finished) => {
-        if (finished) runOnJS(finish)(direction);
+        if (finished) scheduleOnRN(finish, direction);
       },
     );
   };
@@ -143,17 +143,19 @@ const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard
     fling: (direction) => flyOut(direction, direction === "right" ? 1200 : -1200),
   }));
 
-  const pan = Gesture.Pan()
-    .enabled(isTop)
+  const pan = usePanGesture({
+    enabled: isTop,
     // Horizontal intent only: vertical drags fall through to the page scroll.
-    .activeOffsetX([-12, 12])
-    .failOffsetY([-14, 14])
-    .onChange((e) => {
+    activeOffsetX: [-12, 12],
+    failOffsetY: [-14, 14],
+    onUpdate: (e) => {
+      "worklet";
       x.value += e.changeX;
       y.value += e.changeY * 0.2;
       drag.value = Math.min(Math.abs(x.value) / (width * DISTANCE_COMMIT), 1);
-    })
-    .onEnd((e) => {
+    },
+    onDeactivate: (e) => {
+      "worklet";
       const commitRight = x.value > width * DISTANCE_COMMIT || e.velocityX > VELOCITY_COMMIT;
       const commitLeft = x.value < -width * DISTANCE_COMMIT || e.velocityX < -VELOCITY_COMMIT;
       // A flick against the drag direction cancels, so the sign of the velocity wins over position.
@@ -167,7 +169,8 @@ const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function SwipeCard
         y.value = withSpring(0, back);
         drag.value = withSpring(0, back);
       }
-    });
+    },
+  });
 
   const cardStyle = useAnimatedStyle(() => {
     if (!isTop) {

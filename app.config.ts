@@ -10,11 +10,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: "endorphix",
   userInterfaceStyle: "dark",
   backgroundColor: "#0B0C10",
-  splash: {
-    image: "./assets/images/splash-icon.png",
-    resizeMode: "contain",
-    backgroundColor: "#0B0C10",
-  },
   ios: {
     supportsTablet: false,
     bundleIdentifier: "com.endorphix.app",
@@ -46,6 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-router",
     "expo-font",
     "expo-location",
+    "expo-status-bar",
     [
       "expo-splash-screen",
       {
@@ -59,10 +55,5 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   experiments: {
     typedRoutes: true,
-  },
-  extra: {
-    eas: {
-      projectId: "your-eas-project-id",
-    },
   },
 });

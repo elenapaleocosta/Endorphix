@@ -6,7 +6,7 @@ export { Chip, SegmentedControl } from "./Chip";
 export { Select } from "./Select";
 export { Card, Tag } from "./Surface";
 export { Eyebrow, PageHeader, SectionHeader } from "./Typography";
-export { TextField } from "./TextField";
+export { TextField, type TextFieldRef } from "./TextField";
 export { Toggle } from "./Toggle";
 export { Skeleton, EmptyState, ErrorState } from "./States";
 export { ListRow } from "./ListRow";

@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, type ComponentRef } from "react";
 import { Text, TextInput, View, type TextInputProps } from "react-native";
 import { Colors } from "@/constants";
 
@@ -8,7 +8,10 @@ interface TextFieldProps extends Omit<TextInputProps, "style" | "placeholderText
   hint?: string;
 }
 
-export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
+/** The ref type a TextInput actually hands out (an instance, not the component class). */
+export type TextFieldRef = ComponentRef<typeof TextInput>;
+
+export const TextField = forwardRef<TextFieldRef, TextFieldProps>(function TextField(
   { label, error, hint, multiline, ...inputProps },
   ref,
 ) {

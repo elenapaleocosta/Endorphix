@@ -1,6 +1,14 @@
 import { type ComponentProps, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { MotiView } from "moti";
+import Animated, {
+  Easing,
+  cancelAnimation,
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Colors } from "@/constants";
 import { Button } from "./Button";
@@ -28,16 +36,22 @@ export function Skeleton({ className = "", square = false }: { className?: strin
       className={`overflow-hidden bg-raised ${square ? "" : "rounded-lg"} ${className}`}
       style={{ opacity: shown ? 1 : 0 }}
     >
-      {shown ? (
-        <MotiView
-          style={StyleSheet.absoluteFill}
-          from={{ backgroundColor: Colors.surface }}
-          animate={{ backgroundColor: Colors.raised }}
-          transition={{ type: "timing", duration: 800, loop: true }}
-        />
-      ) : null}
+      {shown ? <SkeletonPulse /> : null}
     </View>
   );
+}
+
+/** Breathes between the surface and raised tones every 800ms, on the UI thread. */
+function SkeletonPulse() {
+  const t = useSharedValue(0);
+  useEffect(() => {
+    t.value = withRepeat(withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }), -1, true);
+    return () => cancelAnimation(t);
+  }, [t]);
+  const style = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(t.value, [0, 1], [Colors.surface, Colors.raised]),
+  }));
+  return <Animated.View style={[StyleSheet.absoluteFill, style]} />;
 }
 
 interface EmptyStateProps {

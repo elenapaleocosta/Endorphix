@@ -1,7 +1,7 @@
 import { type ComponentProps } from "react";
 import { ActivityIndicator, Easing, View, useWindowDimensions } from "react-native";
 import { Tabs } from "expo-router";
-import type { BottomTabNavigationOptions } from "@react-navigation/bottom-tabs";
+import type { BottomTabNavigationOptions } from "expo-router/tabs";
 import { useReducedMotion } from "react-native-reanimated";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -13,17 +13,26 @@ import { useAuthStore } from "@/store/auth.store";
 import { TAB_BAR_HEIGHT, WIDE_BREAKPOINT } from "@/components/ui";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
+type TabIconProps = Parameters<NonNullable<BottomTabNavigationOptions["tabBarIcon"]>>[0];
+
+// One source for the tab tints: the bar's labels use them via screenOptions, the icons directly.
+const TAB_ACTIVE = Colors.accent;
+const TAB_INACTIVE = Colors.fgMuted;
 
 const tabIcon =
   (active: IconName, inactive: IconName) =>
-  ({ color, focused }: { color: string; focused: boolean }) => (
-    <Ionicons name={focused ? active : inactive} size={22} color={color} />
+  ({ focused }: TabIconProps) => (
+    <Ionicons name={focused ? active : inactive} size={22} color={focused ? TAB_ACTIVE : TAB_INACTIVE} />
   );
 
 // Ionicons has no suitcase (only a briefcase, which reads as work), so Travel borrows a travel bag
 // from Material Community Icons, drawn at the same size so it sits level with the other tabs.
-const travelIcon = ({ color, focused }: { color: string; focused: boolean }) => (
-  <MaterialCommunityIcons name={focused ? "bag-suitcase" : "bag-suitcase-outline"} size={22} color={color} />
+const travelIcon = ({ focused }: TabIconProps) => (
+  <MaterialCommunityIcons
+    name={focused ? "bag-suitcase" : "bag-suitcase-outline"}
+    size={22}
+    color={focused ? TAB_ACTIVE : TAB_INACTIVE}
+  />
 );
 
 /**
@@ -76,8 +85,8 @@ export default function TabsLayout() {
           ? { animation: "none" as const }
           : { transitionSpec: TAB_TRANSITION_SPEC, sceneStyleInterpolator: tabSceneStyle }),
         sceneStyle: { backgroundColor: Colors.canvas },
-        tabBarActiveTintColor: Colors.accent,
-        tabBarInactiveTintColor: Colors.fgMuted,
+        tabBarActiveTintColor: TAB_ACTIVE,
+        tabBarInactiveTintColor: TAB_INACTIVE,
         // An explicit line height so the label always gets a full line and is never clipped.
         tabBarLabelStyle: { fontSize: 11, lineHeight: 14, fontWeight: "700" },
         tabBarStyle: wide
